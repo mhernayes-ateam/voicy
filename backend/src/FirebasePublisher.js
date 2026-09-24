@@ -81,4 +81,22 @@ export class FirebasePublisher {
       console.error(`[FirebasePublisher] Error publicando final en RTDB:`, err.message);
     }
   }
+
+  async publishTranslation(sessionId, payload) {
+    if (!this.isInitialized || !this.rtdb) {
+      return;
+    }
+
+    try {
+      const ref = this.rtdb.ref(`liveSessions/${sessionId}/translations/es`);
+      await ref.set({
+        segmentId: payload.segmentId,
+        sequence: payload.sequence,
+        text: payload.text,
+        updatedAt: payload.updatedAt
+      });
+    } catch (err) {
+      console.error(`[FirebasePublisher] Error publicando traducción en RTDB:`, err.message);
+    }
+  }
 }

@@ -13,55 +13,84 @@
       <div class="brand-logo-icon">🎙️</div>
       <span>Voicy<span style="color:var(--brand-cyan);">.live</span></span>
     </a>
-    <span class="badge-live"><span class="dot"></span> VIBEATHON 2026</span>
+    <span class="badge-live"><span class="dot"></span> NERDEARLA VIBEATHON 2026</span>
   </header>
 
-  <main style="max-width: 800px; margin: 60px auto 40px; padding: 0 20px; text-align: center;">
-    <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 16px; border-radius:999px; background:rgba(123,79,255,0.12); border:1px solid rgba(123,79,255,0.3); font-size:12px; font-weight:700; color:#A78BFA; margin-bottom:20px;">
-      ⚡ Gemini 3.5 Transcribe Live + Firebase RTDB
+  <main style="max-width: 860px; margin: 50px auto 40px; padding: 0 20px; text-align: center;">
+    <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 16px; border-radius:999px; background:rgba(123,79,255,0.12); border:1px solid rgba(123,79,255,0.3); font-size:12px; font-weight:700; color:#A78BFA; margin-bottom:16px;">
+      ⚡ Gemini 3.5 Live (STT) + Gemini Flash (EN➔ES) + Firebase RTDB
     </div>
 
-    <h1 style="font-family:var(--font-h); font-size:clamp(32px, 6vw, 54px); font-weight:800; line-height:1.15; letter-spacing:-1px;">
-      Subtítulos en tiempo real para conferencias globales
+    <h1 style="font-family:var(--font-h); font-size:clamp(32px, 5.5vw, 50px); font-weight:800; line-height:1.15; letter-spacing:-1px;">
+      Transcripción y traducción simultánea a escala
     </h1>
 
-    <p style="font-size:17px; color:var(--text-muted); max-width:620px; margin:20px auto 36px; line-height:1.6;">
-      Captura continua de audio por WebSocket, transcripción de baja latencia con Gemini Live y distribución masiva en vivo para miles de celulares.
+    <p style="font-size:16px; color:var(--text-muted); max-width:620px; margin:16px auto 32px; line-height:1.6;">
+      Plataforma open source diseñada para conferencias como Nerdearla: múltiples escenarios en simultáneo, baja latencia, traducción inglés ➔ español y distribución masiva para celulares.
     </p>
 
-    <!-- Botones de Acción Inmediata -->
-    <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap; margin-bottom: 50px;">
-      <a href="/broadcast/test" class="btn btn-primary" style="padding:14px 28px; font-size:16px;">
-        🎙️ Abrir Panel del Speaker (/broadcast/test)
-      </a>
-      <a href="/session/test" class="btn btn-outline" style="padding:14px 28px; font-size:16px;">
-        📱 Abrir Vista de Audiencia (/session/test)
-      </a>
+    <!-- Selector de Escenarios Simultáneos (Requisito Multi-Stage Nerdearla) -->
+    <div class="card" style="text-align:left; margin-bottom:36px; border-color:rgba(123,79,255,0.3);">
+      <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:14px;">
+        🏛️ Escenarios en Vivo Simultáneos (Multi-Session Demo)
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+        <!-- Escenario 1: Main Stage -->
+        <div style="background:var(--bg-input); padding:16px; border-radius:14px; border:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="font-size:16px; color:#fff;">Main Stage</strong>
+            <span class="badge-live" style="font-size:9.5px; padding:2px 8px;"><span class="dot"></span> LIVE</span>
+          </div>
+          <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px;">
+            Keynotes principales, Cloud Computing & AI Architecture.
+          </p>
+          <div style="display:flex; gap:8px;">
+            <a href="/session/main-stage" class="btn btn-sm btn-primary" style="flex:1; font-size:12px;">📱 Audiencia</a>
+            <a href="/broadcast/main-stage" class="btn btn-sm btn-outline" style="flex:1; font-size:12px;">🎙️ Speaker</a>
+          </div>
+        </div>
+
+        <!-- Escenario 2: AI & Data Stage -->
+        <div style="background:var(--bg-input); padding:16px; border-radius:14px; border:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="font-size:16px; color:#fff;">AI & Data Stage</strong>
+            <span class="badge-live" style="font-size:9.5px; padding:2px 8px;"><span class="dot"></span> LIVE</span>
+          </div>
+          <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px;">
+            Modelos fundacionales, Gemini Live API & Open Source.
+          </p>
+          <div style="display:flex; gap:8px;">
+            <a href="/session/ai-stage" class="btn btn-sm btn-primary" style="flex:1; font-size:12px;">📱 Audiencia</a>
+            <a href="/broadcast/ai-stage" class="btn btn-sm btn-outline" style="flex:1; font-size:12px;">🎙️ Speaker</a>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Cards de Demostración -->
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:20px; text-align:left;">
+    <!-- Cards de Características Técnicas -->
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:18px; text-align:left;">
       <div class="card">
-        <div style="font-size:24px; margin-bottom:8px;">⚡</div>
-        <h3 style="font-family:var(--font-h); font-size:17px; font-weight:700; margin-bottom:6px;">AudioWorklet 16kHz</h3>
-        <p style="font-size:13px; color:var(--text-muted); line-height:1.5;">
-          Resampling lineal continuo stateful de 100ms sin pérdida de frames ni jitter acústico.
+        <div style="font-size:22px; margin-bottom:8px;">⚡</div>
+        <h3 style="font-family:var(--font-h); font-size:16px; font-weight:700; margin-bottom:4px;">AudioWorklet 16kHz</h3>
+        <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
+          Resampling lineal stateful continuo de 100ms. Micrófono o audio de prueba.
         </p>
       </div>
 
       <div class="card">
-        <div style="font-size:24px; margin-bottom:8px;">🧠</div>
-        <h3 style="font-family:var(--font-h); font-size:17px; font-weight:700; margin-bottom:6px;">Gemini 3.5 Live</h3>
-        <p style="font-size:13px; color:var(--text-muted); line-height:1.5;">
-          Modo SMART con vocabulario técnico nativo (Kubernetes, TypeScript, Nerdearla).
+        <div style="font-size:22px; margin-bottom:8px;">🌐</div>
+        <h3 style="font-family:var(--font-h); font-size:16px; font-weight:700; margin-bottom:4px;">Traducción EN ➔ ES</h3>
+        <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
+          Gemini Flash traduce segmentos al español preservando términos técnicos.
         </p>
       </div>
 
       <div class="card">
-        <div style="font-size:24px; margin-bottom:8px;">🚀</div>
-        <h3 style="font-family:var(--font-h); font-size:17px; font-weight:700; margin-bottom:6px;">RTDB Sharding</h3>
-        <p style="font-size:13px; color:var(--text-muted); line-height:1.5;">
-          Distribución de deltas a miles de teléfonos móviles concurrentes con renderizado suave.
+        <div style="font-size:22px; margin-bottom:8px;">🚀</div>
+        <h3 style="font-family:var(--font-h); font-size:16px; font-weight:700; margin-bottom:4px;">Escalabilidad 30+ Salas</h3>
+        <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
+          1 stream por sala hacia Gemini; miles de celulares consumiendo vía Firebase RTDB.
         </p>
       </div>
     </div>

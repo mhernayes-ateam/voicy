@@ -1,17 +1,19 @@
 import { GeminiConnectionManager } from './GeminiConnectionManager.js';
 import { SegmentManager } from './SegmentManager.js';
 import { FirebasePublisher } from './FirebasePublisher.js';
+import { Translator } from './Translator.js';
 
 /**
  * SessionManager
  * 
  * Gestiona el conjunto de sesiones activas de conferencias.
- * Asocia cada broadcaster a su respectiva conexión de Gemini Live y su SegmentManager.
+ * Asocia cada broadcaster a su respectiva conexión de Gemini Live, su SegmentManager y su pipeline de traducción.
  */
 export class SessionManager {
   constructor(options = {}) {
     this.apiKey = options.apiKey || process.env.GEMINI_API_KEY;
     this.publisher = new FirebasePublisher();
+    this.translator = new Translator(this.apiKey);
     this.sessions = new Map(); // sessionId -> SessionContext
   }
 
@@ -21,12 +23,15 @@ export class SessionManager {
     if (!session) {
       console.log(`[SessionManager] Creando nueva sesión: ${sessionId}`);
 
-      const segmentManager = new SegmentManager(sessionId, (payload) => {
+      const segmentManager = new SegmentManager(sessionId, async (payload) => {
         // Enviar actualizaciones a Firebase RTDB
         if (payload.type === 'interim') {
           this.publisher.publishPartial(sessionId, payload);
         } else if (payload.type === 'final') {
           this.publisher.publishFinal(sessionId, payload);
+
+          // Disparar traducción al español en paralelo
+          this.translateAndPublish(sessionId, payload.segment);
         }
 
         // Si el broadcaster está conectado, enviarle un evento de feedback
@@ -99,6 +104,32 @@ export class SessionManager {
       console.log(`[SessionManager] Broadcaster desconectado de ${sessionId}`);
       session.broadcasterWs = null;
       // No destruimos la sesión inmediatamente para permitir reconexión rápida en caso de lag de red
+    }
+  }
+
+  async translateAndPublish(sessionId, segment) {
+    try {
+      const translation = await this.translator.translateToSpanish(segment.text);
+      const payload = {
+        segmentId: segment.segmentId,
+        sequence: segment.sequence,
+        text: translation,
+        updatedAt: Date.now()
+      };
+
+      // Publicar en RTDB /translations/es
+      await this.publisher.publishTranslation(sessionId, payload);
+
+      // Si el broadcaster está conectado, enviarle también el evento de traducción
+      const session = this.sessions.get(sessionId);
+      if (session && session.broadcasterWs && session.broadcasterWs.readyState === 1) {
+        session.broadcasterWs.send(JSON.stringify({
+          type: 'translation',
+          data: payload
+        }));
+      }
+    } catch (err) {
+      console.error(`[SessionManager] Error traduciendo segmento para ${sessionId}:`, err);
     }
   }
 

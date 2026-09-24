@@ -26,11 +26,17 @@
         <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">Sala de Transmisión</div>
         <h1 id="lblSessionTitle" style="font-family:var(--font-h); font-size:24px; font-weight:700; margin-top:2px;">Main Stage (test)</h1>
         <div style="font-size:13px; color:var(--text-dim); margin-top:4px;">
-          Pipeline: 16kHz PCM Int16 Mono (100ms) ➔ Gemini 3.5 Transcribe Live
+          Pipeline: 16kHz PCM Int16 ➔ Gemini 3.5 Live ➔ Gemini Flash (EN➔ES)
         </div>
       </div>
 
-      <div style="display:flex; gap:12px;">
+      <div style="display:flex; gap:12px; align-items:center;">
+        <!-- Selector de Fuente de Audio -->
+        <select id="selAudioSource" style="background:var(--bg-input); color:#fff; border:1px solid var(--border); padding:10px 14px; border-radius:12px; font-size:13px; font-family:inherit;">
+          <option value="mic">🎙️ Micrófono en Vivo</option>
+          <option value="sample">🎵 Audio de Prueba (Nerdearla Sample EN)</option>
+        </select>
+
         <button id="btnStart" class="btn btn-primary">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
           START LIVE
@@ -45,7 +51,7 @@
     <!-- Vúmetro de Audio y Métricas -->
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--text-muted);">
-        <span>Nivel de Señal del Micrófono</span>
+        <span>Nivel de Señal de Audio</span>
         <span id="lblAudioLevel">0 dB</span>
       </div>
       <div class="vu-meter-bar">
@@ -58,16 +64,31 @@
       </div>
     </div>
 
-    <!-- Monitor de Transcripción en Vivo -->
-    <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <span style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Monitor de Transcripción Gemini Live</span>
-        <span style="font-size:12px; color:var(--text-dim);">Detección continua de idioma</span>
+    <!-- Monitor Dual de Transcripción y Traducción -->
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+      <!-- Original (Inglés) -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <span style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Original (Gemini Live STT)</span>
+          <span class="status-pill active" style="font-size:10px;">EN</span>
+        </div>
+
+        <div class="transcript-box" id="transcriptBox">
+          <div id="transcriptFinal" class="transcript-final">Speech transcript will appear here...</div>
+          <div id="transcriptPartial" class="transcript-partial"></div>
+        </div>
       </div>
 
-      <div class="transcript-box" id="transcriptBox">
-        <div id="transcriptFinal" class="transcript-final">Los subtítulos finales aparecerán aquí...</div>
-        <div id="transcriptPartial" class="transcript-partial"></div>
+      <!-- Traducción (Español) -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <span style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Traducción Simultánea (Gemini Flash)</span>
+          <span class="status-pill active" style="font-size:10px; background:rgba(123,79,255,0.15); color:#A78BFA; border-color:rgba(123,79,255,0.3);">ES</span>
+        </div>
+
+        <div class="transcript-box" style="border-color:rgba(123,79,255,0.3);">
+          <div id="translationFinal" class="transcript-final" style="color:#E2E8F0;">Los subtítulos en español aparecerán aquí al consolidarse la frase...</div>
+        </div>
       </div>
     </div>
   </main>
@@ -76,7 +97,7 @@
     // Extraer sessionId de la URL (/broadcast/{sessionId})
     const pathParts = window.location.pathname.split('/');
     const sessionId = pathParts[2] || 'test';
-    document.getElementById('lblSessionTitle').innerText = `Sesión: ${sessionId}`;
+    document.getElementById('lblSessionTitle').innerText = sessionId.replace('-', ' ').toUpperCase();
 
     let audioContext = null;
     let mediaStream = null;
@@ -86,9 +107,11 @@
     let isBroadcasting = false;
     let totalChunksSent = 0;
     let animationFrameId = null;
+    let sampleSourceNode = null;
 
     const btnStart = document.getElementById('btnStart');
     const btnStop = document.getElementById('btnStop');
+    const selAudioSource = document.getElementById('selAudioSource');
     const badgeLive = document.getElementById('badgeLive');
     const pillWs = document.getElementById('pillWs');
     const pillGemini = document.getElementById('pillGemini');
@@ -99,11 +122,10 @@
     const lblFinalLatency = document.getElementById('lblFinalLatency');
     const transcriptFinal = document.getElementById('transcriptFinal');
     const transcriptPartial = document.getElementById('transcriptPartial');
+    const translationFinal = document.getElementById('translationFinal');
 
-    let lastPartialTimestamp = 0;
     let lastAudioTimestamp = 0;
 
-    // Determinar URL de WebSocket (local o producción)
     function getWsUrl() {
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         return `ws://localhost:8080/ws/broadcast/${sessionId}`;
@@ -117,7 +139,6 @@
         btnStart.disabled = true;
         btnStart.innerText = 'Conectando...';
 
-        // 1. Conectar WebSocket
         const wsUrl = getWsUrl();
         ws = new WebSocket(wsUrl);
         ws.binaryType = 'arraybuffer';
@@ -126,45 +147,54 @@
           pillWs.className = 'status-pill active';
           pillWs.innerText = 'WS: Conectado';
 
-          // 2. Solicitar permiso de micrófono
-          mediaStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              channelCount: 1,
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true
-            }
-          });
-
-          // 3. Inicializar AudioContext y cargar AudioWorklet
           audioContext = new (window.AudioContext || window.webkitAudioContext)();
           await audioContext.audioWorklet.addModule('/worklets/pcm-processor.js');
 
-          const source = audioContext.createMediaStreamSource(mediaStream);
+          let sourceNode = null;
+
+          if (selAudioSource.value === 'sample') {
+            // Generar o reproducir audio de prueba para evaluación directa sin micrófono
+            const audioElem = new Audio('/samples/nerdearla-sample.wav');
+            audioElem.loop = true;
+            await audioElem.play().catch(() => console.log('Autoplay audio sample'));
+            sourceNode = audioContext.createMediaElementSource(audioElem);
+            sampleSourceNode = audioElem;
+          } else {
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                channelCount: 1,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+              }
+            });
+            sourceNode = audioContext.createMediaStreamSource(mediaStream);
+          }
+
           workletNode = new AudioWorkletNode(audioContext, 'streaming-pcm-resampler');
 
-          // 4. Analyser para el Vúmetro
           analyserNode = audioContext.createAnalyser();
           analyserNode.fftSize = 256;
-          source.connect(analyserNode);
+          sourceNode.connect(analyserNode);
 
-          // 5. Escuchar chunks de 100ms procesados en PCM 16kHz
           workletNode.port.onmessage = (event) => {
             if (isBroadcasting && ws && ws.readyState === WebSocket.OPEN) {
               const buffer = event.data.buffer;
               ws.send(buffer);
+              lastAudioTimestamp = Date.now();
               totalChunksSent++;
               lblChunks.innerText = `${totalChunksSent} chunks (~${(totalChunksSent * 0.1).toFixed(1)}s)`;
             }
           };
 
-          source.connect(workletNode);
+          sourceNode.connect(workletNode);
           startVuMeter();
 
           isBroadcasting = true;
           btnStart.style.display = 'none';
           btnStop.style.display = 'inline-flex';
           badgeLive.style.display = 'inline-flex';
+          selAudioSource.disabled = true;
         };
 
         ws.onmessage = (event) => {
@@ -182,6 +212,8 @@
               transcriptPartial.innerText = '';
               const fLatency = now - (msg.data.segment.startMs || now);
               lblFinalLatency.innerText = `${fLatency > 0 ? fLatency : 1800} ms`;
+            } else if (msg.type === 'translation') {
+              translationFinal.innerText = msg.data.text || '';
             } else if (msg.type === 'gemini_status') {
               pillGemini.className = `status-pill ${msg.status === 'connected' ? 'active' : 'error'}`;
               pillGemini.innerText = `Gemini: ${msg.status}`;
@@ -216,6 +248,10 @@
         try { ws.close(); } catch (e) {}
         ws = null;
       }
+      if (sampleSourceNode) {
+        sampleSourceNode.pause();
+        sampleSourceNode = null;
+      }
       if (mediaStream) {
         mediaStream.getTracks().forEach(t => t.stop());
         mediaStream = null;
@@ -234,6 +270,7 @@
       btnStart.style.display = 'inline-flex';
       btnStop.style.display = 'none';
       badgeLive.style.display = 'none';
+      selAudioSource.disabled = false;
       vuMeterFill.style.width = '0%';
       lblAudioLevel.innerText = '0 dB';
     }

@@ -14,7 +14,7 @@
 
   <div class="audience-wrapper">
     <!-- Topbar Mobile -->
-    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 16px;">
       <a href="/" class="brand-logo" style="font-size:18px;">
         <div class="brand-logo-icon" style="width:26px; height:26px; font-size:13px;">🎙️</div>
         <span>Voicy</span>
@@ -22,18 +22,31 @@
 
       <div style="display:flex; align-items:center; gap:8px;">
         <span class="badge-live"><span class="dot"></span> LIVE</span>
-        <span id="badgeLanguage" class="status-pill active" style="font-size:10px;">ORIGINAL</span>
       </div>
     </div>
 
-    <!-- Título de la Charla / Sesión -->
-    <div style="margin-top:12px; margin-bottom: 20px;">
-      <div id="sessionStage" style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">
-        Conferencia en Vivo
+    <!-- Título de la Charla y Selector de Idioma -->
+    <div style="margin-top:8px; margin-bottom: 20px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+        <div>
+          <div id="sessionStage" style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">
+            Conferencia en Vivo
+          </div>
+          <h2 id="sessionTitle" style="font-family:var(--font-h); font-size:22px; font-weight:700; margin-top:2px;">
+            Sala: test
+          </h2>
+        </div>
+
+        <!-- Selector de Idioma: ORIGINAL vs ESPAÑOL -->
+        <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:12px; border:1px solid var(--border);">
+          <button id="btnLangOriginal" class="btn btn-sm" style="padding:6px 12px; font-size:11px; border-radius:9px; background:var(--brand-purple); color:#fff;" onclick="setLanguage('en')">
+            ORIGINAL
+          </button>
+          <button id="btnLangSpanish" class="btn btn-sm" style="padding:6px 12px; font-size:11px; border-radius:9px; background:transparent; color:var(--text-muted);" onclick="setLanguage('es')">
+            ESPAÑOL
+          </button>
+        </div>
       </div>
-      <h2 id="sessionTitle" style="font-family:var(--font-h); font-size:20px; font-weight:700; margin-top:2px;">
-        Sala: test
-      </h2>
     </div>
 
     <!-- Pantalla Principal de Subtítulos -->
@@ -46,8 +59,9 @@
     </div>
 
     <!-- Footer Mobile -->
-    <div style="margin-top:auto; padding-top:20px; text-align:center; font-size:12px; color:var(--text-dim); border-top:1px solid var(--border);">
-      Powered by <strong>Gemini 3.5 Transcribe Live</strong> & <strong>Firebase</strong>
+    <div style="margin-top:auto; padding-top:20px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--text-dim); border-top:1px solid var(--border);">
+      <span>Nerdearla Vibeathon 2026</span>
+      <span>Gemini 3.5 Live & Flash</span>
     </div>
   </div>
 
@@ -55,36 +69,55 @@
     // Extraer sessionId de la URL (/session/{sessionId})
     const pathParts = window.location.pathname.split('/');
     const sessionId = pathParts[2] || 'test';
-    document.getElementById('sessionTitle').innerText = `Sala: ${sessionId}`;
+    document.getElementById('sessionTitle').innerText = sessionId.replace('-', ' ').toUpperCase();
 
     const captionFinal = document.getElementById('captionFinal');
     const captionLive = document.getElementById('captionLive');
+    const btnLangOriginal = document.getElementById('btnLangOriginal');
+    const btnLangSpanish = document.getElementById('btnLangSpanish');
 
-    // Buffer de renderizado suave (Throttling 100ms)
-    let pendingPartial = '';
-    let pendingFinal = '';
+    let currentLang = 'en'; // 'en' | 'es'
+
+    // Datos en memoria
+    let originalPartial = '';
+    let originalFinal = '';
+    let spanishFinal = '';
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      if (lang === 'en') {
+        btnLangOriginal.style.background = 'var(--brand-purple)';
+        btnLangOriginal.style.color = '#fff';
+        btnLangSpanish.style.background = 'transparent';
+        btnLangSpanish.style.color = 'var(--text-muted)';
+      } else {
+        btnLangSpanish.style.background = 'var(--brand-purple)';
+        btnLangSpanish.style.color = '#fff';
+        btnLangOriginal.style.background = 'transparent';
+        btnLangOriginal.style.color = 'var(--text-muted)';
+      }
+      renderCaptions();
+    }
+
+    // Renderizado suave
     let renderTimer = null;
-
-    function scheduleRender(partialText, finalText) {
-      pendingPartial = partialText != null ? partialText : pendingPartial;
-      if (finalText != null) pendingFinal = finalText;
-
+    function renderCaptions() {
       if (!renderTimer) {
         renderTimer = setTimeout(() => {
-          if (pendingFinal) {
-            captionFinal.innerText = pendingFinal;
-          }
-          if (pendingPartial) {
-            captionLive.innerText = pendingPartial;
-          } else if (!pendingFinal) {
-            captionLive.innerText = 'Transcribiendo audio en vivo...';
+          if (currentLang === 'en') {
+            captionFinal.innerText = originalFinal;
+            captionLive.innerText = originalPartial || (originalFinal ? '' : 'Listening to speaker...');
+          } else {
+            // Modo Español: Muestra la traducción consolidada
+            captionFinal.innerText = spanishFinal;
+            captionLive.innerText = originalPartial ? `[Traduciendo...]` : (spanishFinal ? '' : 'Esperando traducción...');
           }
           renderTimer = null;
-        }, 100);
+        }, 80);
       }
     }
 
-    // Configuración de Firebase para Voicy (voicy-live)
+    // Configuración Firebase Realtime Database
     const firebaseConfig = {
       apiKey: "AIzaSyDummyKeyForPublicRead",
       databaseURL: "https://voicy-live-default-rtdb.firebaseio.com",
@@ -98,22 +131,25 @@
         firebase.initializeApp(firebaseConfig);
       }
       const db = firebase.database();
-      const sessionRef = db.ref(`liveSessions/${sessionId}`);
-
-      sessionRef.on('value', (snapshot) => {
+      
+      // Escuchar estado en vivo
+      db.ref(`liveSessions/${sessionId}`).on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
           rtdbConnected = true;
-          const partial = data.current?.partialText || '';
-          const final = data.lastFinal?.text || '';
-          scheduleRender(partial, final);
+          originalPartial = data.current?.partialText || '';
+          originalFinal = data.lastFinal?.text || '';
+          if (data.translations?.es?.text) {
+            spanishFinal = data.translations.es.text;
+          }
+          renderCaptions();
         }
       });
     } catch (e) {
-      console.warn("RTDB no configurado aún en cliente. Usando fallback de desarrollo local.");
+      console.warn("RTDB offline o no configurado aún en cliente.");
     }
 
-    // Fallback de desarrollo local si no hay RTDB en la nube configurado aún
+    // Fallback de desarrollo local por WebSocket
     setTimeout(() => {
       if (!rtdbConnected && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
         console.log("Activando listener local WebSocket para pruebas inmediatas...");
@@ -122,9 +158,15 @@
           try {
             const msg = JSON.parse(event.data);
             if (msg.type === 'interim') {
-              scheduleRender(msg.data.partialText, null);
+              originalPartial = msg.data.partialText || '';
+              renderCaptions();
             } else if (msg.type === 'final') {
-              scheduleRender('', msg.data.segment.text);
+              originalFinal = msg.data.segment.text || '';
+              originalPartial = '';
+              renderCaptions();
+            } else if (msg.type === 'translation') {
+              spanishFinal = msg.data.text || '';
+              renderCaptions();
             }
           } catch (e) {}
         };
