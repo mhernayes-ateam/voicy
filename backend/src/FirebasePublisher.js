@@ -88,11 +88,23 @@ export class FirebasePublisher {
     }
 
     try {
-      const ref = this.rtdb.ref(`liveSessions/${sessionId}/translations/es`);
+      const targetLang = payload.targetLang || 'es';
+      const ref = this.rtdb.ref(`liveSessions/${sessionId}/translations/${targetLang}`);
       await ref.set({
         segmentId: payload.segmentId,
         sequence: payload.sequence,
+        sourceLang: payload.sourceLang || 'auto',
+        targetLang: targetLang,
         text: payload.text,
+        updatedAt: payload.updatedAt
+      });
+
+      // También actualizar el puntero activo de traducción en la sesión
+      await this.rtdb.ref(`liveSessions/${sessionId}/activeTranslation`).set({
+        sourceLang: payload.sourceLang || 'auto',
+        targetLang: targetLang,
+        text: payload.text,
+        sequence: payload.sequence,
         updatedAt: payload.updatedAt
       });
     } catch (err) {

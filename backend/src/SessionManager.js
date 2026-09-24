@@ -109,15 +109,17 @@ export class SessionManager {
 
   async translateAndPublish(sessionId, segment) {
     try {
-      const translation = await this.translator.translateToSpanish(segment.text);
+      const result = await this.translator.translateAuto(segment.text);
       const payload = {
         segmentId: segment.segmentId,
         sequence: segment.sequence,
-        text: translation,
+        sourceLang: result.sourceLang,
+        targetLang: result.targetLang,
+        text: result.text,
         updatedAt: Date.now()
       };
 
-      // Publicar en RTDB /translations/es
+      // Publicar en RTDB /translations/{targetLang} y /activeTranslation
       await this.publisher.publishTranslation(sessionId, payload);
 
       // Si el broadcaster está conectado, enviarle también el evento de traducción

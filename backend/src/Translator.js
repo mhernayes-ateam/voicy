@@ -1,9 +1,10 @@
 /**
- * Translator (Gemini Flash-Lite)
+ * Translator (Gemini Flash) - Bidireccional Inteligente (EN ➔ ES / ES ➔ EN)
  * 
- * Traduce segmentos definitivos de inglés a español en tiempo real.
- * Utiliza llamadas HTTP ultrarrápidas con instrucciones concisas para preservar
- * terminología técnica, nombres de productos y marcas (Nerdearla, Kubernetes, React, etc.).
+ * Cumple con el requisito opcional valorado de Nerdearla:
+ * - Si el orador habla en Inglés ➔ Traduce al Español.
+ * - Si el orador habla en Español ➔ Traduce al Inglés.
+ * - Preserva términos técnicos, marcas y código (Kubernetes, React, Gemini, Nerdearla, etc.).
  */
 
 export class Translator {
@@ -11,48 +12,67 @@ export class Translator {
     this.apiKey = apiKey || process.env.GEMINI_API_KEY;
   }
 
-  async translateToSpanish(text) {
-    if (!text || !text.trim()) return '';
+  async translateAuto(text) {
+    if (!text || !text.trim()) {
+      return { text: '', sourceLang: 'en', targetLang: 'es' };
+    }
+
     if (!this.apiKey) {
-      console.warn('[Translator] Sin GEMINI_API_KEY. Usando traducción de respaldo.');
-      return `[ES] ${text}`;
+      console.warn('[Translator] Sin GEMINI_API_KEY. Usando fallback de desarrollo.');
+      return { text: `[TRAD] ${text}`, sourceLang: 'en', targetLang: 'es' };
     }
 
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`;
-      
+
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `You are an expert conference simultaneous interpreter. Translate the following English speech segment to fluent Spanish.
-Rules:
-- Preserve technical terms, product names, code keywords, and brands verbatim (e.g. Kubernetes, React, Gemini, Nerdearla, Cloud Run, TypeScript).
-- Output ONLY the translated Spanish sentence. Do not add quotes, explanations, or prefixes.
+              text: `You are an expert conference simultaneous interpreter for Nerdearla.
+Task:
+1. Detect if the input sentence is primarily English or Spanish.
+2. If it is English, translate it to natural, fluent Latin American Spanish.
+3. If it is Spanish, translate it to natural, fluent English.
+4. Strictly preserve technical terms, software libraries, product names, code keywords, and brands verbatim (e.g., Kubernetes, React, Gemini, TypeScript, Nerdearla, Cloud Run, Docker).
 
-English: "${text}"`
+Format your response as valid JSON:
+{
+  "translation": "<translated text>",
+  "sourceLang": "en" | "es",
+  "targetLang": "es" | "en"
+}
+
+Input: "${text}"`
             }]
           }],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 120
+            responseMimeType: "application/json",
+            maxOutputTokens: 150
           }
         })
       });
 
       if (!response.ok) {
         console.error(`[Translator] Error en Gemini Flash (${response.status}):`, await response.text());
-        return `[ES] ${text}`;
+        return { text: `[TRAD] ${text}`, sourceLang: 'auto', targetLang: 'es' };
       }
 
       const data = await response.json();
-      const translation = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-      return translation || `[ES] ${text}`;
+      const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      const parsed = JSON.parse(rawJson);
+
+      return {
+        text: parsed.translation || text,
+        sourceLang: parsed.sourceLang || 'en',
+        targetLang: parsed.targetLang || 'es'
+      };
     } catch (err) {
-      console.error('[Translator] Excepción traduciendo segmento:', err.message);
-      return `[ES] ${text}`;
+      console.error('[Translator] Error en traducción bidireccional:', err.message);
+      return { text: `[TRAD] ${text}`, sourceLang: 'auto', targetLang: 'es' };
     }
   }
 }

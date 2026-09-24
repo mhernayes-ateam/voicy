@@ -37,13 +37,13 @@
           </h2>
         </div>
 
-        <!-- Selector de Idioma: ORIGINAL vs ESPAÑOL -->
+        <!-- Selector de Idioma: ORIGINAL vs TRADUCCIÓN (Bidireccional) -->
         <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:12px; border:1px solid var(--border);">
-          <button id="btnLangOriginal" class="btn btn-sm" style="padding:6px 12px; font-size:11px; border-radius:9px; background:var(--brand-purple); color:#fff;" onclick="setLanguage('en')">
+          <button id="btnLangOriginal" class="btn btn-sm" style="padding:6px 12px; font-size:11px; border-radius:9px; background:var(--brand-purple); color:#fff;" onclick="setLanguage('original')">
             ORIGINAL
           </button>
-          <button id="btnLangSpanish" class="btn btn-sm" style="padding:6px 12px; font-size:11px; border-radius:9px; background:transparent; color:var(--text-muted);" onclick="setLanguage('es')">
-            ESPAÑOL
+          <button id="btnLangTranslate" class="btn btn-sm" style="padding:6px 12px; font-size:11px; border-radius:9px; background:transparent; color:var(--text-muted);" onclick="setLanguage('translated')">
+            <span id="lblTargetLang">TRADUCCIÓN</span>
           </button>
         </div>
       </div>
@@ -74,25 +74,27 @@
     const captionFinal = document.getElementById('captionFinal');
     const captionLive = document.getElementById('captionLive');
     const btnLangOriginal = document.getElementById('btnLangOriginal');
-    const btnLangSpanish = document.getElementById('btnLangSpanish');
+    const btnLangTranslate = document.getElementById('btnLangTranslate');
+    const lblTargetLang = document.getElementById('lblTargetLang');
 
-    let currentLang = 'en'; // 'en' | 'es'
+    let currentMode = 'original'; // 'original' | 'translated'
+    let currentTargetLang = 'es';
 
     // Datos en memoria
     let originalPartial = '';
     let originalFinal = '';
-    let spanishFinal = '';
+    let translatedFinal = '';
 
-    function setLanguage(lang) {
-      currentLang = lang;
-      if (lang === 'en') {
+    function setLanguage(mode) {
+      currentMode = mode;
+      if (mode === 'original') {
         btnLangOriginal.style.background = 'var(--brand-purple)';
         btnLangOriginal.style.color = '#fff';
-        btnLangSpanish.style.background = 'transparent';
-        btnLangSpanish.style.color = 'var(--text-muted)';
+        btnLangTranslate.style.background = 'transparent';
+        btnLangTranslate.style.color = 'var(--text-muted)';
       } else {
-        btnLangSpanish.style.background = 'var(--brand-purple)';
-        btnLangSpanish.style.color = '#fff';
+        btnLangTranslate.style.background = 'var(--brand-purple)';
+        btnLangTranslate.style.color = '#fff';
         btnLangOriginal.style.background = 'transparent';
         btnLangOriginal.style.color = 'var(--text-muted)';
       }
@@ -104,13 +106,13 @@
     function renderCaptions() {
       if (!renderTimer) {
         renderTimer = setTimeout(() => {
-          if (currentLang === 'en') {
+          if (currentMode === 'original') {
             captionFinal.innerText = originalFinal;
             captionLive.innerText = originalPartial || (originalFinal ? '' : 'Listening to speaker...');
           } else {
-            // Modo Español: Muestra la traducción consolidada
-            captionFinal.innerText = spanishFinal;
-            captionLive.innerText = originalPartial ? `[Traduciendo...]` : (spanishFinal ? '' : 'Esperando traducción...');
+            // Modo Traducción (Español o Inglés según el orador)
+            captionFinal.innerText = translatedFinal;
+            captionLive.innerText = originalPartial ? `[Traduciendo...]` : (translatedFinal ? '' : 'Esperando traducción...');
           }
           renderTimer = null;
         }, 80);
@@ -139,8 +141,11 @@
           rtdbConnected = true;
           originalPartial = data.current?.partialText || '';
           originalFinal = data.lastFinal?.text || '';
-          if (data.translations?.es?.text) {
-            spanishFinal = data.translations.es.text;
+          
+          if (data.activeTranslation?.text) {
+            translatedFinal = data.activeTranslation.text;
+            currentTargetLang = data.activeTranslation.targetLang || 'es';
+            lblTargetLang.innerText = currentTargetLang === 'es' ? 'ESPAÑOL' : 'ENGLISH';
           }
           renderCaptions();
         }
@@ -165,7 +170,9 @@
               originalPartial = '';
               renderCaptions();
             } else if (msg.type === 'translation') {
-              spanishFinal = msg.data.text || '';
+              translatedFinal = msg.data.text || '';
+              currentTargetLang = msg.data.targetLang || 'es';
+              lblTargetLang.innerText = currentTargetLang === 'es' ? 'ESPAÑOL' : 'ENGLISH';
               renderCaptions();
             }
           } catch (e) {}

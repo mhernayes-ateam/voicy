@@ -79,15 +79,15 @@
         </div>
       </div>
 
-      <!-- Traducción (Español) -->
+      <!-- Traducción Bidireccional (Español o Inglés) -->
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
           <span style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Traducción Simultánea (Gemini Flash)</span>
-          <span class="status-pill active" style="font-size:10px; background:rgba(123,79,255,0.15); color:#A78BFA; border-color:rgba(123,79,255,0.3);">ES</span>
+          <span id="pillTargetLang" class="status-pill active" style="font-size:10px; background:rgba(123,79,255,0.15); color:#A78BFA; border-color:rgba(123,79,255,0.3);">EN ➔ ES / ES ➔ EN</span>
         </div>
 
         <div class="transcript-box" style="border-color:rgba(123,79,255,0.3);">
-          <div id="translationFinal" class="transcript-final" style="color:#E2E8F0;">Los subtítulos en español aparecerán aquí al consolidarse la frase...</div>
+          <div id="translationFinal" class="transcript-final" style="color:#E2E8F0;">La traducción simultánea aparecerá aquí al consolidarse la frase...</div>
         </div>
       </div>
     </div>
@@ -214,6 +214,10 @@
               lblFinalLatency.innerText = `${fLatency > 0 ? fLatency : 1800} ms`;
             } else if (msg.type === 'translation') {
               translationFinal.innerText = msg.data.text || '';
+              const pillTargetLang = document.getElementById('pillTargetLang');
+              if (pillTargetLang && msg.data.sourceLang && msg.data.targetLang) {
+                pillTargetLang.innerText = `${msg.data.sourceLang.toUpperCase()} ➔ ${msg.data.targetLang.toUpperCase()}`;
+              }
             } else if (msg.type === 'gemini_status') {
               pillGemini.className = `status-pill ${msg.status === 'connected' ? 'active' : 'error'}`;
               pillGemini.innerText = `Gemini: ${msg.status}`;
