@@ -30,7 +30,7 @@ export class SessionManager {
         } else if (payload.type === 'final') {
           this.publisher.publishFinal(sessionId, payload);
 
-          // Disparar traducción al español en paralelo
+          // Disparar traducción al idioma contrario en paralelo
           this.translateAndPublish(sessionId, payload.segment);
         }
 
@@ -85,6 +85,25 @@ export class SessionManager {
     } else {
       console.log(`[SessionManager] Reconectando broadcaster a sesión existente: ${sessionId}`);
       session.broadcasterWs = broadcasterWs;
+
+      // Si geminiClient está desconectado, reconectarlo
+      if (!session.geminiClient || !session.geminiClient.isConnected) {
+        console.log(`[SessionManager] Gemini desconectado en sesión existente ${sessionId}. Reconectando...`);
+        try {
+          await session.geminiClient.connect();
+        } catch (err) {
+          console.error(`[SessionManager] Error reconectando Gemini:`, err.message);
+        }
+      }
+
+      // Notificar inmediatamente al broadcaster del estado de Gemini
+      const status = session.geminiClient && session.geminiClient.isConnected ? 'connected' : 'disconnected';
+      if (broadcasterWs && broadcasterWs.readyState === 1) {
+        broadcasterWs.send(JSON.stringify({
+          type: 'gemini_status',
+          status: status
+        }));
+      }
     }
 
     return session;
@@ -103,7 +122,6 @@ export class SessionManager {
     if (session) {
       console.log(`[SessionManager] Broadcaster desconectado de ${sessionId}`);
       session.broadcasterWs = null;
-      // No destruimos la sesión inmediatamente para permitir reconexión rápida en caso de lag de red
     }
   }
 

@@ -1,20 +1,52 @@
 import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
 import dotenv from 'dotenv';
 import { SessionManager } from './SessionManager.js';
 
 dotenv.config();
 
-const PORT = parseInt(process.env.PORT || '8080', 10);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const FRONTEND_DIR = path.resolve(__dirname, '../../frontend');
+
+const PORT = parseInt(process.env.PORT || '8090', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 
 const sessionManager = new SessionManager({
   apiKey: process.env.GEMINI_API_KEY
 });
 
-// Servidor HTTP básico
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.wav': 'audio/wav',
+  '.mp3': 'audio/mpeg',
+  '.svg': 'image/svg+xml'
+};
+
+function serveStaticFile(filePath, res) {
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('404 Not Found');
+      return;
+    }
+    const ext = path.extname(filePath).toLowerCase();
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+    res.writeHead(200, { 'Content-Type': contentType });
+    res.end(data);
+  });
+}
+
+// Servidor HTTP unificado (API + Frontend estático + WebSockets)
 const server = http.createServer((req, res) => {
-  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -26,8 +58,10 @@ const server = http.createServer((req, res) => {
   }
 
   const url = new URL(req.url, `http://${req.headers.host}`);
+  const pathname = url.pathname;
 
-  if (url.pathname === '/health' || url.pathname === '/') {
+  // 1. Health check
+  if (pathname === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       service: 'voicy-caption-stream',
@@ -38,11 +72,34 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: 'Not found' }));
+  // 2. Rutas amigables del Frontend
+  if (pathname === '/' || pathname === '/index.html') {
+    return serveStaticFile(path.join(FRONTEND_DIR, 'index.html'), res);
+  }
+
+  if (pathname.startsWith('/broadcast')) {
+    return serveStaticFile(path.join(FRONTEND_DIR, 'broadcast.html'), res);
+  }
+
+  if (pathname.startsWith('/session') || pathname.startsWith('/audience')) {
+    return serveStaticFile(path.join(FRONTEND_DIR, 'audience.html'), res);
+  }
+
+  // 3. Archivos estáticos directos (CSS, JS, Worklets)
+  const safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
+  const filePath = path.join(FRONTEND_DIR, safePath);
+
+  fs.stat(filePath, (err, stats) => {
+    if (!err && stats.isFile()) {
+      serveStaticFile(filePath, res);
+    } else {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('404 Not Found');
+    }
+  });
 });
 
-// Servidor WebSocket montado sobre el servidor HTTP
+// Servidor WebSocket montado sobre el mismo servidor HTTP
 const wss = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', (request, socket, head) => {
@@ -76,10 +133,8 @@ wss.on('connection', async (ws, request, sessionId) => {
 
     ws.on('message', (data, isBinary) => {
       if (isBinary) {
-        // Audio PCM Int16 raw enviado por el AudioWorklet
         sessionManager.handleBroadcasterAudio(sessionId, data);
       } else {
-        // Mensajes de control / comandos JSON
         try {
           const msg = JSON.parse(data.toString());
           if (msg.action === 'ping') {
@@ -110,8 +165,9 @@ wss.on('connection', async (ws, request, sessionId) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`=======================================================`);
-  console.log(`🚀 Voicy Caption Stream escuchando en http://${HOST}:${PORT}`);
+  console.log(`🚀 Voicy All-in-One corriendo en http://${HOST}:${PORT}`);
+  console.log(`🎙️ Studio Broadcaster: http://${HOST}:${PORT}/broadcast.html?session=main-stage`);
+  console.log(`📱 Vista Audiencia:    http://${HOST}:${PORT}/audience.html?session=main-stage`);
   console.log(`📡 WebSocket endpoint: ws://${HOST}:${PORT}/ws/broadcast/:sessionId`);
-  console.log(`🏥 Health check: http://${HOST}:${PORT}/health`);
   console.log(`=======================================================`);
 });

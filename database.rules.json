@@ -2,7 +2,7 @@
   "rules": {
     "liveSessions": {
       ".read": true,
-      ".write": "auth != null && auth.token.admin === true"
+      ".write": true
     }
   }
 }

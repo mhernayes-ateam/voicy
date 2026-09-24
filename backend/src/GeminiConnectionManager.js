@@ -3,14 +3,13 @@ import WebSocket from 'ws';
 /**
  * GeminiConnectionManager
  * 
- * Gestiona el ciclo de vida del WebSocket hacia Gemini Live (gemini-3.5-transcribe-live).
+ * Gestiona el ciclo de vida del WebSocket hacia Gemini Live (gemini-3.5-transcribe-live) en v1beta.
  * 
  * Responsabilidades:
  * 1. Handshake inicial con setup de transcripción (mode: SMART, customVocabulary).
  * 2. Streaming de chunks PCM 16kHz continuos.
  * 3. Procesamiento de interimInputTranscription (provisionales) e inputTranscription (finales autoritativos).
  * 4. Control de límite de 10 minutos con reconexión transparente (Session Resumption / GoAway).
- * 5. Watchdog anti-freeze (detecta cuando hay audio continuo pero Gemini deja de responder).
  */
 export class GeminiConnectionManager {
   constructor(options = {}) {
@@ -31,16 +30,9 @@ export class GeminiConnectionManager {
     this.sessionHandle = null;
     this.sessionStartTime = null;
 
-    // Métricas del watchdog
-    this.lastAudioSentAt = 0;
-    this.lastGeminiMessageAt = 0;
-    this.lastInterimAt = 0;
-    this.lastFinalAt = 0;
-
     // Timers
-    this.watchdogInterval = null;
     this.maxDurationTimer = null;
-    this.MAX_SESSION_DURATION_MS = 9 * 60 * 1000; // 9 minutos (para prevenir el corte de 10 min)
+    this.MAX_SESSION_DURATION_MS = 9 * 60 * 1000; // 9 minutos para prevenir el corte de 10 min
   }
 
   async connect() {
@@ -51,7 +43,8 @@ export class GeminiConnectionManager {
     }
 
     const host = 'generativelanguage.googleapis.com';
-    const path = `/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${this.apiKey}`;
+    // Se requiere v1beta para gemini-3.5-transcribe-live
+    const path = `/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${this.apiKey}`;
     const uri = `wss://${host}${path}`;
 
     return new Promise((resolve, reject) => {
@@ -59,12 +52,10 @@ export class GeminiConnectionManager {
         this.ws = new WebSocket(uri);
 
         this.ws.on('open', () => {
-          console.log(`[GeminiLive:${this.sessionId}] Conectado a Gemini Live API. Enviando Setup...`);
+          console.log(`[GeminiLive:${this.sessionId}] Conectado a Gemini Live API (v1beta). Enviando Setup...`);
           this.sendSetup();
           this.isConnected = true;
           this.sessionStartTime = Date.now();
-          this.lastGeminiMessageAt = Date.now();
-          this.startWatchdog();
           this.scheduleSessionRenewal();
           this.onStatusChange('connected');
           resolve();
@@ -100,8 +91,8 @@ export class GeminiConnectionManager {
           responseModalities: ['TEXT']
         },
         inputAudioTranscription: {
-          languageCodes: [], // Auto-detección multi-idioma continua
-          mode: 'SMART',     // Subtítulos limpios sin muletillas
+          languageCodes: ['en', 'es'], // Bilingüe EN / ES
+          mode: 'SMART',               // Subtítulos limpios sin muletillas
           customVocabulary: this.customVocabulary
         }
       }
@@ -134,23 +125,23 @@ export class GeminiConnectionManager {
     };
 
     this.ws.send(JSON.stringify(audioMsg));
-    this.lastAudioSentAt = Date.now();
     return true;
   }
 
   handleIncomingMessage(rawData) {
     try {
-      this.lastGeminiMessageAt = Date.now();
       const payload = JSON.parse(rawData.toString());
 
       // 1. Guardar session handle si se entrega para resumption
-      if (payload.sessionHandle) {
+      if (payload.sessionResumptionUpdate && payload.sessionResumptionUpdate.newHandle) {
+        this.sessionHandle = payload.sessionResumptionUpdate.newHandle;
+      } else if (payload.sessionHandle) {
         this.sessionHandle = payload.sessionHandle;
       }
 
-      // 2. Manejo de GoAway (aviso de terminación de Google)
+      // 2. Manejo de GoAway (aviso de terminación preventiva de Google)
       if (payload.goAway) {
-        console.warn(`[GeminiLive:${this.sessionId}] Recibido mensaje GoAway. Preparando reconexión.`);
+        console.warn(`[GeminiLive:${this.sessionId}] Recibido GoAway. Reconectando transparentemente...`);
         this.reconnect();
         return;
       }
@@ -161,40 +152,16 @@ export class GeminiConnectionManager {
       // 3. Interim transcription (texto parcial e incremental)
       if (serverContent.interimInputTranscription && serverContent.interimInputTranscription.text) {
         const text = serverContent.interimInputTranscription.text;
-        this.lastInterimAt = Date.now();
         this.onInterim(text);
       }
 
       // 4. Input transcription (texto consolidado y definitivo)
       if (serverContent.inputTranscription && serverContent.inputTranscription.text) {
         const text = serverContent.inputTranscription.text;
-        this.lastFinalAt = Date.now();
         this.onFinal(text);
       }
     } catch (err) {
-      console.error(`[GeminiLive:${this.sessionId}] Error parseando mensaje de Gemini:`, err);
-    }
-  }
-
-  startWatchdog() {
-    this.stopWatchdog();
-    this.watchdogInterval = setInterval(() => {
-      const now = Date.now();
-      const audioActive = (now - this.lastAudioSentAt) < 1500; // Se envió audio en los últimos 1.5s
-      const timeSinceLastMessage = now - this.lastGeminiMessageAt;
-
-      // Si hay audio activo pero Gemini no responde en > 4 segundos, posible silent freeze
-      if (audioActive && timeSinceLastMessage > 4000) {
-        console.warn(`[GeminiLive:${this.sessionId}] Watchdog: Silencio de Gemini detectado (${timeSinceLastMessage}ms sin respuesta con audio activo). Reconectando...`);
-        this.reconnect();
-      }
-    }, 1000);
-  }
-
-  stopWatchdog() {
-    if (this.watchdogInterval) {
-      clearInterval(this.watchdogInterval);
-      this.watchdogInterval = null;
+      console.error(`[GeminiLive:${this.sessionId}] Error procesando mensaje de Gemini:`, err);
     }
   }
 
@@ -212,7 +179,7 @@ export class GeminiConnectionManager {
     this.onStatusChange('reconnecting');
     try {
       await this.connect();
-      console.log(`[GeminiLive:${this.sessionId}] Reconexión exitosa.`);
+      console.log(`[GeminiLive:${this.sessionId}] Reconexión a Gemini exitosa.`);
     } catch (err) {
       console.error(`[GeminiLive:${this.sessionId}] Error en reconexión:`, err);
     }
@@ -220,7 +187,6 @@ export class GeminiConnectionManager {
 
   cleanup() {
     this.isConnected = false;
-    this.stopWatchdog();
     if (this.maxDurationTimer) {
       clearTimeout(this.maxDurationTimer);
       this.maxDurationTimer = null;

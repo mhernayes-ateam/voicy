@@ -96,9 +96,12 @@
   </main>
 
   <script>
-    // Extraer sessionId de la URL (/broadcast/{sessionId})
+    // Extraer sessionId de URLSearchParams (?session=main-stage) o del path (/broadcast/main-stage)
+    const urlParams = new URLSearchParams(window.location.search);
     const pathParts = window.location.pathname.split('/');
-    const sessionId = pathParts[2] || 'test';
+    const pathSession = pathParts[2] && pathParts[2] !== 'broadcast.html' ? pathParts[2] : null;
+    const sessionId = urlParams.get('session') || urlParams.get('s') || pathSession || 'main-stage';
+    
     document.getElementById('lblSessionTitle').innerText = sessionId.replace('-', ' ').toUpperCase();
 
     let audioContext = null;
