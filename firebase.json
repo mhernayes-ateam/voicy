@@ -7,14 +7,39 @@
       "**/node_modules/**"
     ],
     "cleanUrls": true,
+    "trailingSlash": false,
     "rewrites": [
+      {
+        "source": "/broadcast",
+        "destination": "/broadcast.html"
+      },
       {
         "source": "/broadcast/**",
         "destination": "/broadcast.html"
       },
       {
+        "source": "/overlay",
+        "destination": "/overlay.html"
+      },
+      {
+        "source": "/overlay/**",
+        "destination": "/overlay.html"
+      },
+      {
+        "source": "/monitor",
+        "destination": "/monitor.html"
+      },
+      {
+        "source": "/monitor/**",
+        "destination": "/monitor.html"
+      },
+      {
         "source": "/session/**",
-        "destination": "/session.html"
+        "destination": "/index.html"
+      },
+      {
+        "source": "/audience/**",
+        "destination": "/index.html"
       },
       {
         "source": "**",

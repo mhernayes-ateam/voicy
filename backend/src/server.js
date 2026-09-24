@@ -77,20 +77,20 @@ const server = http.createServer((req, res) => {
     return serveStaticFile(path.join(FRONTEND_DIR, 'index.html'), res);
   }
 
-  if (pathname.startsWith('/broadcast')) {
+  if (pathname === '/broadcast' || pathname.startsWith('/broadcast')) {
     return serveStaticFile(path.join(FRONTEND_DIR, 'broadcast.html'), res);
   }
 
-  if (pathname.startsWith('/overlay')) {
+  if (pathname === '/overlay' || pathname.startsWith('/overlay')) {
     return serveStaticFile(path.join(FRONTEND_DIR, 'overlay.html'), res);
   }
 
-  if (pathname.startsWith('/monitor')) {
+  if (pathname === '/monitor' || pathname.startsWith('/monitor')) {
     return serveStaticFile(path.join(FRONTEND_DIR, 'monitor.html'), res);
   }
 
-  if (pathname.startsWith('/session') || pathname.startsWith('/audience')) {
-    return serveStaticFile(path.join(FRONTEND_DIR, 'audience.html'), res);
+  if (pathname.startsWith('/session') || pathname.startsWith('/audience') || pathname.startsWith('/stage-')) {
+    return serveStaticFile(path.join(FRONTEND_DIR, 'index.html'), res);
   }
 
   // 3. Archivos estáticos directos (CSS, JS, Worklets)
