@@ -67,30 +67,39 @@ export class FirebasePublisher {
 
   async publishTranslation(sessionId, payload) {
     try {
-      const targetLang = payload.targetLang || 'es';
-      const translationData = {
+      const translationPayload = {
         segmentId: payload.segmentId,
         sequence: payload.sequence,
         sourceLang: payload.sourceLang || 'auto',
-        targetLang: targetLang,
+        targetLang: payload.targetLang || 'es',
         text: payload.text,
+        es: payload.es || payload.text,
+        en: payload.en || payload.text,
         updatedAt: payload.updatedAt
       };
 
-      // 1. Guardar en el mapa de traducciones por idioma
-      const langUrl = `${this.databaseURL}/liveSessions/${sessionId}/translations/${targetLang}.json`;
-      fetch(langUrl, {
+      // 1. Guardar tanto ES como EN en el mapa de traducciones
+      const esUrl = `${this.databaseURL}/liveSessions/${sessionId}/translations/es.json`;
+      const enUrl = `${this.databaseURL}/liveSessions/${sessionId}/translations/en.json`;
+      const activeUrl = `${this.databaseURL}/liveSessions/${sessionId}/activeTranslation.json`;
+
+      fetch(esUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(translationData)
-      }).catch(e => console.error('[FirebasePublisher] Error en PUT lang:', e.message));
+        body: JSON.stringify({ ...translationPayload, text: payload.es || payload.text })
+      }).catch(() => {});
+
+      fetch(enUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...translationPayload, text: payload.en || payload.text })
+      }).catch(() => {});
 
       // 2. Actualizar el puntero activeTranslation
-      const activeUrl = `${this.databaseURL}/liveSessions/${sessionId}/activeTranslation.json`;
       await fetch(activeUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(translationData)
+        body: JSON.stringify(translationPayload)
       });
     } catch (err) {
       console.error(`[FirebasePublisher] Error publicando traducción:`, err.message);

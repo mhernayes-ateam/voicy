@@ -10,8 +10,8 @@
     .record-bar {
       display: flex;
       align-items: center;
-      gap: 16px;
-      margin: 20px 0 24px 0;
+      gap: 14px;
+      margin: 18px 0 22px 0;
       flex-wrap: wrap;
     }
 
@@ -19,7 +19,7 @@
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      padding: 14px 26px;
+      padding: 13px 26px;
       border-radius: 9999px;
       font-size: 15px;
       font-weight: 700;
@@ -57,7 +57,7 @@
       color: var(--text-muted);
       border: 1px solid var(--border);
       border-radius: 9999px;
-      padding: 10px 18px;
+      padding: 9px 16px;
       font-size: 13px;
       outline: none;
       cursor: pointer;
@@ -68,6 +68,40 @@
       color: #fff;
     }
 
+    .stage-tab {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .stage-tab:hover, .stage-tab.active {
+      border-color: var(--brand-purple);
+      color: #fff;
+      background: rgba(123, 79, 255, 0.18);
+    }
+
+    .lang-pill {
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 9px;
+      border: none;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+    }
+    .lang-pill.active {
+      background: var(--brand-purple);
+      color: #fff;
+    }
+
     .status-dot-mini {
       display: inline-block;
       width: 8px;
@@ -75,40 +109,81 @@
       border-radius: 50%;
       background: #EF4444;
     }
+
+    /* Modal de Código QR */
+    .qr-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(8px);
+      z-index: 999;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .qr-modal-content {
+      background: #11141D;
+      border: 1px solid rgba(123, 79, 255, 0.35);
+      border-radius: 24px;
+      padding: 32px 28px;
+      text-align: center;
+      max-width: 380px;
+      width: 100%;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .qr-img {
+      width: 230px;
+      height: 230px;
+      margin: 18px auto;
+      border-radius: 16px;
+      background: #fff;
+      padding: 10px;
+    }
   </style>
 </head>
 <body style="background: #090B10; overflow-x: hidden;">
 
   <div class="audience-wrapper">
     <!-- Topbar Minimalista -->
-    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 14px;">
       <a href="/" class="brand-logo" style="font-size:18px;">
         <div class="brand-logo-icon" style="width:26px; height:26px; font-size:13px;">🎙️</div>
         <span>Voicy</span>
       </a>
 
-      <!-- Selector de Idioma: ORIGINAL vs TRADUCCIÓN -->
+      <!-- Selector de Idioma Triple: ORIGINAL | ESPAÑOL | ENGLISH -->
       <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:12px; border:1px solid var(--border);">
-        <button id="btnLangOriginal" class="btn btn-sm" style="padding:6px 14px; font-size:11px; border-radius:9px; background:var(--brand-purple); color:#fff;" onclick="setLanguage('original')">
-          ORIGINAL
-        </button>
-        <button id="btnLangTranslate" class="btn btn-sm" style="padding:6px 14px; font-size:11px; border-radius:9px; background:transparent; color:var(--text-muted);" onclick="setLanguage('translated')">
-          <span id="lblTargetLang">TRADUCCIÓN</span>
-        </button>
+        <button id="btnLangOriginal" class="lang-pill active" onclick="setLanguage('original')">ORIGINAL</button>
+        <button id="btnLangEs" class="lang-pill" onclick="setLanguage('es')">ESPAÑOL</button>
+        <button id="btnLangEn" class="lang-pill" onclick="setLanguage('en')">ENGLISH</button>
       </div>
     </div>
 
-    <!-- Título de la Sala -->
-    <div style="margin-top:8px;">
-      <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">
-        Sala de Transmisión
+    <!-- Título y Selector de Stage (Stage 1 / Stage 2) -->
+    <div style="margin-top:6px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
+      <div>
+        <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">
+          Sala de Transmisión
+        </div>
+        <h2 id="sessionTitle" style="font-family:var(--font-h); font-size:24px; font-weight:700; margin-top:2px;">
+          STAGE 1
+        </h2>
       </div>
-      <h2 id="sessionTitle" style="font-family:var(--font-h); font-size:22px; font-weight:700; margin-top:2px;">
-        MAIN STAGE
-      </h2>
+
+      <!-- Selector de Escenario (Requisito Multi-Stage Nerdearla) -->
+      <div style="display:flex; gap:8px;">
+        <button id="tabStage1" class="stage-tab active" onclick="selectStage('stage-1')">Stage 1</button>
+        <button id="tabStage2" class="stage-tab" onclick="selectStage('stage-2')">Stage 2</button>
+      </div>
     </div>
 
-    <!-- Barra de Control: Botón de Record Minimalista y Selector de Fuente -->
+    <!-- Barra de Control: Botón de Record, Fuente y Botón de QR -->
     <div class="record-bar">
       <button id="btnRecordToggle" class="btn-record" onclick="toggleBroadcast()">
         <span class="status-dot-mini" id="recordDot"></span>
@@ -120,9 +195,14 @@
         <option value="sample">🎵 Audio Demo (Nerdearla EN)</option>
       </select>
 
-      <span id="statusIndicator" style="font-size:12px; color:var(--text-dim); margin-left:auto;">
-        Listo para grabar
-      </span>
+      <!-- Botón para Mostrar el QR de Audiencia en Pantalla -->
+      <button class="stage-tab" style="display:inline-flex; align-items:center; gap:6px; margin-left:auto;" onclick="openQrModal()">
+        <span>📱 QR Audiencia</span>
+      </button>
+    </div>
+
+    <div style="font-size:12px; color:var(--text-dim); margin-bottom:12px;">
+      <span id="statusIndicator">Listo para transmitir</span>
     </div>
 
     <!-- Pantalla Principal de Texto en Tiempo Real -->
@@ -141,33 +221,59 @@
     </div>
   </div>
 
-  <script>
-    // Extraer sessionId de URLSearchParams (?session=main-stage) o del path
-    const urlParams = new URLSearchParams(window.location.search);
-    const pathParts = window.location.pathname.split('/');
-    const pathSession = pathParts[2] && pathParts[2] !== 'broadcast.html' ? pathParts[2] : null;
-    const sessionId = urlParams.get('session') || urlParams.get('s') || pathSession || 'main-stage';
-    
-    document.getElementById('sessionTitle').innerText = sessionId.replace('-', ' ').toUpperCase();
+  <!-- Modal Emergente de Código QR para Proyectar o Compartir -->
+  <div class="qr-modal-backdrop" id="qrModal" onclick="closeQrModal(event)">
+    <div class="qr-modal-content">
+      <div style="font-size:12px; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:0.8px;">
+        Subtítulos para la Audiencia
+      </div>
+      <h3 style="font-size:20px; font-weight:700; margin-top:4px;" id="qrStageTitle">Stage 1</h3>
+      <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">
+        Escaneá con tu celular para leer los subtítulos en tiempo real:
+      </p>
 
+      <img id="qrImage" class="qr-img" src="" alt="QR Subtítulos Audiencia">
+
+      <div style="font-size:12px; color:var(--brand-cyan); word-break:break-all; font-family:monospace;" id="qrUrlLabel">
+        ...
+      </div>
+
+      <button class="btn btn-outline btn-sm" style="margin-top:20px; width:100%; border-radius:12px;" onclick="closeQrModal()">
+        Cerrar
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    let sessionId = urlParams.get('session') || urlParams.get('s') || 'stage-1';
+    
+    // Normalizar main-stage a stage-1
+    if (sessionId === 'main-stage') sessionId = 'stage-1';
+    if (sessionId === 'ai-stage') sessionId = 'stage-2';
+
+    const sessionTitle = document.getElementById('sessionTitle');
+    const tabStage1 = document.getElementById('tabStage1');
+    const tabStage2 = document.getElementById('tabStage2');
     const captionFinal = document.getElementById('captionFinal');
     const captionLive = document.getElementById('captionLive');
-    const btnLangOriginal = document.getElementById('btnLangOriginal');
-    const btnLangTranslate = document.getElementById('btnLangTranslate');
-    const lblTargetLang = document.getElementById('lblTargetLang');
     const btnRecordToggle = document.getElementById('btnRecordToggle');
     const recordDot = document.getElementById('recordDot');
     const recordText = document.getElementById('recordText');
     const selAudioSource = document.getElementById('selAudioSource');
     const statusIndicator = document.getElementById('statusIndicator');
 
-    let currentMode = 'original'; // 'original' | 'translated'
-    let currentTargetLang = 'es';
+    const btnLangOriginal = document.getElementById('btnLangOriginal');
+    const btnLangEs = document.getElementById('btnLangEs');
+    const btnLangEn = document.getElementById('btnLangEn');
+
+    let currentMode = 'original'; // 'original' | 'es' | 'en'
 
     // Buffers de texto
     let originalPartial = '';
     let originalFinal = '';
-    let translatedFinal = '';
+    let spanishFinal = '';
+    let englishFinal = '';
 
     // Variables de audio y WebSocket
     let audioContext = null;
@@ -177,19 +283,39 @@
     let isBroadcasting = false;
     let sampleSourceNode = null;
 
+    function updateStageTabs() {
+      sessionTitle.innerText = sessionId.replace('-', ' ').toUpperCase();
+      if (sessionId === 'stage-2') {
+        tabStage1.classList.remove('active');
+        tabStage2.classList.add('active');
+      } else {
+        tabStage1.classList.add('active');
+        tabStage2.classList.remove('active');
+      }
+    }
+    updateStageTabs();
+
+    function selectStage(newSession) {
+      if (isBroadcasting) {
+        alert("Detené la grabación antes de cambiar de escenario.");
+        return;
+      }
+      sessionId = newSession;
+      window.history.replaceState(null, '', `?session=${sessionId}`);
+      updateStageTabs();
+      // Limpiar buffers
+      originalPartial = '';
+      originalFinal = '';
+      spanishFinal = '';
+      englishFinal = '';
+      renderCaptions();
+    }
+
     function setLanguage(mode) {
       currentMode = mode;
-      if (mode === 'original') {
-        btnLangOriginal.style.background = 'var(--brand-purple)';
-        btnLangOriginal.style.color = '#fff';
-        btnLangTranslate.style.background = 'transparent';
-        btnLangTranslate.style.color = 'var(--text-muted)';
-      } else {
-        btnLangTranslate.style.background = 'var(--brand-purple)';
-        btnLangTranslate.style.color = '#fff';
-        btnLangOriginal.style.background = 'transparent';
-        btnLangOriginal.style.color = 'var(--text-muted)';
-      }
+      btnLangOriginal.classList.toggle('active', mode === 'original');
+      btnLangEs.classList.toggle('active', mode === 'es');
+      btnLangEn.classList.toggle('active', mode === 'en');
       renderCaptions();
     }
 
@@ -200,12 +326,15 @@
           if (currentMode === 'original') {
             captionFinal.innerText = originalFinal;
             captionLive.innerText = originalPartial || (originalFinal ? '' : (isBroadcasting ? 'Escuchando al orador...' : 'Presioná RECORD para comenzar a hablar...'));
-          } else {
-            captionFinal.innerText = translatedFinal;
-            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (translatedFinal ? '' : (isBroadcasting ? 'Escuchando para traducir...' : 'Presioná RECORD para comenzar a hablar...'));
+          } else if (currentMode === 'es') {
+            captionFinal.innerText = spanishFinal || originalFinal;
+            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (spanishFinal ? '' : (isBroadcasting ? 'Traduciendo al español...' : 'Presioná RECORD para comenzar a hablar...'));
+          } else if (currentMode === 'en') {
+            captionFinal.innerText = englishFinal || originalFinal;
+            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (englishFinal ? '' : (isBroadcasting ? 'Translating to English...' : 'Presioná RECORD para comenzar a hablar...'));
           }
           renderTimer = null;
-        }, 50);
+        }, 40);
       }
     }
 
@@ -229,7 +358,7 @@
       try {
         btnRecordToggle.disabled = true;
         recordText.innerText = 'CONECTANDO...';
-        statusIndicator.innerText = 'Conectando con Gemini...';
+        statusIndicator.innerText = `Conectando con Gemini para ${sessionId.toUpperCase()}...`;
 
         const wsUrl = getWsUrl();
         ws = new WebSocket(wsUrl);
@@ -244,7 +373,7 @@
           if (selAudioSource.value === 'sample') {
             const audioElem = new Audio('/samples/nerdearla-sample.wav');
             audioElem.loop = true;
-            await audioElem.play().catch(() => console.log('Autoplay sample'));
+            await audioElem.play().catch(() => {});
             sourceNode = audioContext.createMediaElementSource(audioElem);
             sampleSourceNode = audioElem;
           } else {
@@ -275,7 +404,9 @@
           recordDot.style.background = '#F87171';
           recordText.innerText = 'DETENER';
           selAudioSource.disabled = true;
-          statusIndicator.innerText = '• Grabando y transmitiendo en vivo';
+          tabStage1.disabled = true;
+          tabStage2.disabled = true;
+          statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Gemini Activo)`;
           renderCaptions();
         };
 
@@ -290,18 +421,16 @@
               originalPartial = '';
               renderCaptions();
             } else if (msg.type === 'translation') {
-              translatedFinal = msg.data.text || '';
-              currentTargetLang = msg.data.targetLang || 'es';
-              lblTargetLang.innerText = currentTargetLang === 'es' ? 'TRADUCCIÓN (ES)' : 'TRADUCCIÓN (EN)';
+              // Guardar ambas traducciones
+              spanishFinal = msg.data.es || msg.data.text || '';
+              englishFinal = msg.data.en || msg.data.text || '';
               renderCaptions();
             } else if (msg.type === 'gemini_status') {
               if (msg.status === 'connected') {
-                statusIndicator.innerText = '• En vivo (Gemini Transcribe Activo)';
+                statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Gemini Live Activo)`;
               }
             }
-          } catch (e) {
-            console.warn('Mensaje recibido:', event.data);
-          }
+          } catch (e) {}
         };
 
         ws.onclose = () => {
@@ -345,8 +474,32 @@
       recordDot.style.background = '#fff';
       recordText.innerText = 'RECORD';
       selAudioSource.disabled = false;
+      tabStage1.disabled = false;
+      tabStage2.disabled = false;
       statusIndicator.innerText = 'Transmisión detenida';
       renderCaptions();
+    }
+
+    // Funciones del Modal de QR
+    function openQrModal() {
+      // Usar host público si está disponible, o actual
+      const baseUrl = window.location.hostname.includes('web.app') 
+        ? 'https://voicy-3fca6.web.app' 
+        : `${window.location.protocol}//${window.location.host}`;
+      
+      const audienceUrl = `${baseUrl}/?session=${sessionId}`;
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=8&data=${encodeURIComponent(audienceUrl)}`;
+
+      document.getElementById('qrStageTitle').innerText = sessionId.replace('-', ' ').toUpperCase();
+      document.getElementById('qrImage').src = qrApiUrl;
+      document.getElementById('qrUrlLabel').innerText = audienceUrl;
+      document.getElementById('qrModal').style.display = 'flex';
+    }
+
+    function closeQrModal(e) {
+      if (!e || e.target.id === 'qrModal' || e.target.tagName === 'BUTTON') {
+        document.getElementById('qrModal').style.display = 'none';
+      }
     }
   </script>
 </body>

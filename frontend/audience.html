@@ -9,41 +9,117 @@
   <!-- Firebase Compat SDKs para Realtime Database -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <style>
+    .stage-pill {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 5px 12px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .stage-pill:hover, .stage-pill.active {
+      border-color: var(--brand-purple);
+      color: #fff;
+      background: rgba(123, 79, 255, 0.18);
+    }
+
+    .lang-pill {
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 9px;
+      border: none;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+    }
+    .lang-pill.active {
+      background: var(--brand-purple);
+      color: #fff;
+    }
+
+    /* Modal de Código QR */
+    .qr-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(8px);
+      z-index: 999;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .qr-modal-content {
+      background: #11141D;
+      border: 1px solid rgba(123, 79, 255, 0.35);
+      border-radius: 24px;
+      padding: 30px 24px;
+      text-align: center;
+      max-width: 360px;
+      width: 100%;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .qr-img {
+      width: 220px;
+      height: 220px;
+      margin: 16px auto;
+      border-radius: 16px;
+      background: #fff;
+      padding: 10px;
+    }
+  </style>
 </head>
 <body style="background: #090B10; overflow-x: hidden;">
 
   <div class="audience-wrapper">
     <!-- Topbar Mobile -->
-    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 14px;">
       <a href="/" class="brand-logo" style="font-size:18px;">
         <div class="brand-logo-icon" style="width:26px; height:26px; font-size:13px;">🎙️</div>
         <span>Voicy</span>
       </a>
 
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span class="badge-live"><span class="dot"></span> LIVE</span>
+      <!-- Selector de Idioma Triple: ORIGINAL | ESPAÑOL | ENGLISH -->
+      <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:12px; border:1px solid var(--border);">
+        <button id="btnLangOriginal" class="lang-pill active" onclick="setLanguage('original')">ORIGINAL</button>
+        <button id="btnLangEs" class="lang-pill" onclick="setLanguage('es')">ESPAÑOL</button>
+        <button id="btnLangEn" class="lang-pill" onclick="setLanguage('en')">ENGLISH</button>
       </div>
     </div>
 
-    <!-- Título de la Charla y Selector de Idioma -->
-    <div style="margin-top:8px; margin-bottom: 20px;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+    <!-- Título de la Charla y Selector de Sala -->
+    <div style="margin-top:6px; margin-bottom: 20px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:10px;">
         <div>
-          <div id="sessionStage" style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">
-            Conferencia en Vivo
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="badge-live" style="font-size:10px; padding:2px 8px;"><span class="dot"></span> LIVE</span>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">
+              Subtítulos en Vivo
+            </span>
           </div>
-          <h2 id="sessionTitle" style="font-family:var(--font-h); font-size:22px; font-weight:700; margin-top:2px;">
-            Sala: test
+          <h2 id="sessionTitle" style="font-family:var(--font-h); font-size:24px; font-weight:700; margin-top:4px;">
+            STAGE 1
           </h2>
         </div>
 
-        <!-- Selector de Idioma: ORIGINAL vs TRADUCCIÓN (Bidireccional) -->
-        <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:12px; border:1px solid var(--border);">
-          <button id="btnLangOriginal" class="btn btn-sm" style="padding:6px 12px; font-size:11px; border-radius:9px; background:var(--brand-purple); color:#fff;" onclick="setLanguage('original')">
-            ORIGINAL
-          </button>
-          <button id="btnLangTranslate" class="btn btn-sm" style="padding:6px 12px; font-size:11px; border-radius:9px; background:transparent; color:var(--text-muted);" onclick="setLanguage('translated')">
-            <span id="lblTargetLang">TRADUCCIÓN</span>
+        <!-- Selector de Escenario (Stage 1 / Stage 2) + Botón QR -->
+        <div style="display:flex; align-items:center; gap:6px;">
+          <a href="/?session=stage-1" id="tabStage1" class="stage-pill active">Stage 1</a>
+          <a href="/?session=stage-2" id="tabStage2" class="stage-pill">Stage 2</a>
+          <button class="stage-pill" style="display:inline-flex; align-items:center; gap:4px; padding:5px 9px;" onclick="openQrModal()">
+            <span>📱 QR</span>
           </button>
         </div>
       </div>
@@ -65,46 +141,72 @@
     </div>
   </div>
 
+  <!-- Modal Emergente de Código QR para compartir -->
+  <div class="qr-modal-backdrop" id="qrModal" onclick="closeQrModal(event)">
+    <div class="qr-modal-content">
+      <div style="font-size:12px; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:0.8px;">
+        Compartir Subtítulos
+      </div>
+      <h3 style="font-size:20px; font-weight:700; margin-top:4px;" id="qrStageTitle">Stage 1</h3>
+      <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">
+        Escaneá con la cámara de tu celular para abrir esta sala:
+      </p>
+
+      <img id="qrImage" class="qr-img" src="" alt="QR Subtítulos">
+
+      <div style="font-size:12px; color:var(--brand-cyan); word-break:break-all; font-family:monospace;" id="qrUrlLabel">
+        ...
+      </div>
+
+      <button class="btn btn-outline btn-sm" style="margin-top:18px; width:100%; border-radius:12px;" onclick="closeQrModal()">
+        Cerrar
+      </button>
+    </div>
+  </div>
+
   <script>
-    // Extraer sessionId de URLSearchParams (?session=main-stage) o del path (/session/main-stage)
     const urlParams = new URLSearchParams(window.location.search);
-    const pathParts = window.location.pathname.split('/');
-    const pathSession = pathParts[2] && pathParts[2] !== 'audience.html' && pathParts[2] !== 'session.html' ? pathParts[2] : null;
-    const sessionId = urlParams.get('session') || urlParams.get('s') || pathSession || 'main-stage';
+    let sessionId = urlParams.get('session') || urlParams.get('s') || 'stage-1';
     
+    // Normalizar nombres de etapa
+    if (sessionId === 'main-stage') sessionId = 'stage-1';
+    if (sessionId === 'ai-stage') sessionId = 'stage-2';
+
     document.getElementById('sessionTitle').innerText = sessionId.replace('-', ' ').toUpperCase();
+
+    // Actualizar tabs de escenario
+    const tabStage1 = document.getElementById('tabStage1');
+    const tabStage2 = document.getElementById('tabStage2');
+    if (sessionId === 'stage-2') {
+      tabStage1.classList.remove('active');
+      tabStage2.classList.add('active');
+    } else {
+      tabStage1.classList.add('active');
+      tabStage2.classList.remove('active');
+    }
 
     const captionFinal = document.getElementById('captionFinal');
     const captionLive = document.getElementById('captionLive');
     const btnLangOriginal = document.getElementById('btnLangOriginal');
-    const btnLangTranslate = document.getElementById('btnLangTranslate');
-    const lblTargetLang = document.getElementById('lblTargetLang');
+    const btnLangEs = document.getElementById('btnLangEs');
+    const btnLangEn = document.getElementById('btnLangEn');
 
-    let currentMode = 'original'; // 'original' | 'translated'
-    let currentTargetLang = 'es';
+    let currentMode = 'original'; // 'original' | 'es' | 'en'
 
     // Datos en memoria
     let originalPartial = '';
     let originalFinal = '';
-    let translatedFinal = '';
+    let spanishFinal = '';
+    let englishFinal = '';
 
     function setLanguage(mode) {
       currentMode = mode;
-      if (mode === 'original') {
-        btnLangOriginal.style.background = 'var(--brand-purple)';
-        btnLangOriginal.style.color = '#fff';
-        btnLangTranslate.style.background = 'transparent';
-        btnLangTranslate.style.color = 'var(--text-muted)';
-      } else {
-        btnLangTranslate.style.background = 'var(--brand-purple)';
-        btnLangTranslate.style.color = '#fff';
-        btnLangOriginal.style.background = 'transparent';
-        btnLangOriginal.style.color = 'var(--text-muted)';
-      }
+      btnLangOriginal.classList.toggle('active', mode === 'original');
+      btnLangEs.classList.toggle('active', mode === 'es');
+      btnLangEn.classList.toggle('active', mode === 'en');
       renderCaptions();
     }
 
-    // Renderizado suave
     let renderTimer = null;
     function renderCaptions() {
       if (!renderTimer) {
@@ -112,13 +214,15 @@
           if (currentMode === 'original') {
             captionFinal.innerText = originalFinal;
             captionLive.innerText = originalPartial || (originalFinal ? '' : 'Listening to speaker...');
-          } else {
-            // Modo Traducción (Español o Inglés según el orador)
-            captionFinal.innerText = translatedFinal;
-            captionLive.innerText = originalPartial ? `[Traduciendo...]` : (translatedFinal ? '' : 'Esperando traducción...');
+          } else if (currentMode === 'es') {
+            captionFinal.innerText = spanishFinal || originalFinal;
+            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (spanishFinal ? '' : 'Esperando traducción...');
+          } else if (currentMode === 'en') {
+            captionFinal.innerText = englishFinal || originalFinal;
+            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (englishFinal ? '' : 'Waiting for translation...');
           }
           renderTimer = null;
-        }, 80);
+        }, 40);
       }
     }
 
@@ -138,7 +242,7 @@
       }
       const db = firebase.database();
       
-      // Escuchar estado en vivo
+      // Escuchar estado en vivo de la sesión seleccionada
       db.ref(`liveSessions/${sessionId}`).on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
@@ -146,22 +250,28 @@
           originalPartial = data.current?.partialText || '';
           originalFinal = data.lastFinal?.text || '';
           
-          if (data.activeTranslation?.text) {
-            translatedFinal = data.activeTranslation.text;
-            currentTargetLang = data.activeTranslation.targetLang || 'es';
-            lblTargetLang.innerText = currentTargetLang === 'es' ? 'ESPAÑOL' : 'ENGLISH';
+          if (data.translations?.es?.text) {
+            spanishFinal = data.translations.es.text;
+          } else if (data.activeTranslation?.es) {
+            spanishFinal = data.activeTranslation.es;
           }
+
+          if (data.translations?.en?.text) {
+            englishFinal = data.translations.en.text;
+          } else if (data.activeTranslation?.en) {
+            englishFinal = data.activeTranslation.en;
+          }
+
           renderCaptions();
         }
       });
     } catch (e) {
-      console.warn("RTDB offline o no configurado aún en cliente.");
+      console.warn("RTDB offline en cliente:", e.message);
     }
 
-    // Fallback de desarrollo local por WebSocket
+    // Fallback de desarrollo local por WebSocket directo
     setTimeout(() => {
       if (!rtdbConnected && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-        console.log("Activando listener local WebSocket para pruebas inmediatas...");
         const ws = new WebSocket(`ws://localhost:8090/ws/broadcast/${sessionId}`);
         ws.onmessage = (event) => {
           try {
@@ -174,15 +284,35 @@
               originalPartial = '';
               renderCaptions();
             } else if (msg.type === 'translation') {
-              translatedFinal = msg.data.text || '';
-              currentTargetLang = msg.data.targetLang || 'es';
-              lblTargetLang.innerText = currentTargetLang === 'es' ? 'ESPAÑOL' : 'ENGLISH';
+              spanishFinal = msg.data.es || msg.data.text || '';
+              englishFinal = msg.data.en || msg.data.text || '';
               renderCaptions();
             }
           } catch (e) {}
         };
       }
     }, 1500);
+
+    // Funciones del Modal de QR
+    function openQrModal() {
+      const baseUrl = window.location.hostname.includes('web.app') 
+        ? 'https://voicy-3fca6.web.app' 
+        : `${window.location.protocol}//${window.location.host}`;
+      
+      const audienceUrl = `${baseUrl}/?session=${sessionId}`;
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=8&data=${encodeURIComponent(audienceUrl)}`;
+
+      document.getElementById('qrStageTitle').innerText = sessionId.replace('-', ' ').toUpperCase();
+      document.getElementById('qrImage').src = qrApiUrl;
+      document.getElementById('qrUrlLabel').innerText = audienceUrl;
+      document.getElementById('qrModal').style.display = 'flex';
+    }
+
+    function closeQrModal(e) {
+      if (!e || e.target.id === 'qrModal' || e.target.tagName === 'BUTTON') {
+        document.getElementById('qrModal').style.display = 'none';
+      }
+    }
   </script>
 </body>
 </html>

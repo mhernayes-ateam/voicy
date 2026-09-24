@@ -140,6 +140,8 @@ export class SessionManager {
         sourceLang: result.sourceLang,
         targetLang: result.targetLang,
         text: result.text,
+        es: result.es,
+        en: result.en,
         translationLatencyMs: translationLatencyMs,
         totalTranslatedLatencyMs: totalTranslatedLatencyMs,
         updatedAt: tEnd
