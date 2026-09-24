@@ -276,17 +276,15 @@ body {
 }
 
 .audience-captions .final-phrase {
-  color: var(--text-dim);
-  font-weight: 500;
+  color: #FFFFFF;
+  font-weight: 700;
   margin-bottom: 12px;
-  transition: all 0.25s ease;
+  line-height: 1.35;
 }
 
 .audience-captions .live-phrase {
   color: #FFFFFF;
-  background: linear-gradient(135deg, #FFFFFF 30%, #A5B4FC 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-weight: 700;
   display: inline;
 }
 

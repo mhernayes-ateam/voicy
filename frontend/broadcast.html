@@ -323,25 +323,64 @@
       renderCaptions();
     }
 
-    let renderTimer = null;
-    function renderCaptions() {
-      if (!renderTimer) {
-        renderTimer = setTimeout(() => {
-          if (currentMode === 'original') {
-            captionFinal.innerText = originalFinal;
-            captionLive.innerText = originalPartial || (originalFinal ? '' : (isBroadcasting ? 'Escuchando al orador...' : 'Presioná RECORD para comenzar a hablar...'));
-          } else if (currentMode === 'es') {
-            captionFinal.innerText = spanishFinal || originalFinal;
-            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (spanishFinal ? '' : (isBroadcasting ? 'Traduciendo al español...' : 'Presioná RECORD para comenzar a hablar...'));
-          } else if (currentMode === 'en') {
-            captionFinal.innerText = englishFinal || originalFinal;
-            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (englishFinal ? '' : (isBroadcasting ? 'Translating to English...' : 'Presioná RECORD para comenzar a hablar...'));
-          } else if (currentMode === 'pt') {
-            captionFinal.innerText = portugueseFinal || originalFinal;
-            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (portugueseFinal ? '' : (isBroadcasting ? 'Traduzindo para português...' : 'Presioná RECORD para comenzar a hablar...'));
+    class WordStreamer {
+      constructor(element) {
+        this.element = element;
+        this.displayed = [];
+        this.target = [];
+        this.timer = null;
+      }
+
+      streamTo(fullText) {
+        if (!fullText || !fullText.trim()) {
+          this.element.innerText = '';
+          this.displayed = [];
+          this.target = [];
+          return;
+        }
+
+        const words = fullText.trim().split(/\s+/);
+        this.target = words;
+
+        // Si es un texto completamente diferente, empezar de cero
+        if (this.displayed.length > 0 && words[0] !== this.displayed[0]) {
+          this.displayed = [];
+        }
+
+        if (this.timer) return;
+
+        this.timer = setInterval(() => {
+          if (this.displayed.length < this.target.length) {
+            const nextWord = this.target[this.displayed.length];
+            this.displayed.push(nextWord);
+            this.element.innerText = this.displayed.join(' ');
+          } else {
+            clearInterval(this.timer);
+            this.timer = null;
           }
-          renderTimer = null;
-        }, 40);
+        }, 50); // 50ms por palabra: efecto teletipo fluido y natural
+      }
+    }
+
+    const streamerLive = new WordStreamer(captionLive);
+
+    function renderCaptions() {
+      let activeText = '';
+      if (currentMode === 'original') {
+        activeText = originalFinal || originalPartial;
+      } else if (currentMode === 'es') {
+        activeText = spanishFinal || originalFinal || originalPartial;
+      } else if (currentMode === 'en') {
+        activeText = englishFinal || originalFinal || originalPartial;
+      } else if (currentMode === 'pt') {
+        activeText = portugueseFinal || originalFinal || originalPartial;
+      }
+
+      if (activeText) {
+        captionFinal.innerText = ''; // Un solo bloque sin confusiones de gris/blanco
+        streamerLive.streamTo(activeText);
+      } else {
+        streamerLive.streamTo(isBroadcasting ? 'Escuchando al orador...' : 'Presioná RECORD para comenzar a hablar...');
       }
     }
 
