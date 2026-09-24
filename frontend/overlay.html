@@ -72,12 +72,8 @@
       text-shadow: 0 2px 4px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,0.9);
       letter-spacing: -0.2px;
       word-break: break-word;
-    }
-
-    .caption-live {
-      color: #38BDF8;
-      font-weight: 500;
-      font-style: italic;
+      max-height: 2.85em; /* Límite estricto de 2 líneas */
+      overflow: hidden;
     }
   </style>
 </head>
@@ -109,16 +105,15 @@
 
     let hideTimeout = null;
 
-    function displayCaption(text, isLive = false) {
+    function displayCaption(text) {
       if (!text || !text.trim()) {
         return;
       }
 
-      if (isLive) {
-        captionText.innerHTML = `<span class="caption-live">« ${text} »</span>`;
-      } else {
-        captionText.innerText = text;
-      }
+      const words = text.trim().split(/\s+/).filter(Boolean);
+      // Mantener como máximo 12 palabras para asegurar 2 líneas visibles
+      const visible = words.length > 12 ? words.slice(-12).join(' ') : words.join(' ');
+      captionText.innerText = visible;
 
       overlayBox.classList.add('visible');
 

@@ -266,31 +266,43 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
+  text-align: center;
   font-family: var(--font-h);
-  font-size: clamp(28px, 5.5vw, 42px);
+  font-size: clamp(26px, 5vw, 40px);
   font-weight: 700;
   line-height: 1.35;
   letter-spacing: -0.5px;
-  min-height: 380px;
+  min-height: 240px;
   padding: 20px 0;
+  position: relative;
+}
+
+.caption-viewport {
+  width: 100%;
+  max-width: 680px;
+  max-height: 2.85em; /* Límite estricto: exactamente máximo 2 líneas visibles */
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .audience-captions .final-phrase {
-  color: #FFFFFF;
-  font-weight: 700;
-  margin-bottom: 12px;
-  line-height: 1.35;
+  display: none; /* Todo consolidado en un solo viewport limpio */
 }
 
 .audience-captions .live-phrase {
   color: #FFFFFF;
   font-weight: 700;
   display: inline;
+  word-break: break-word;
 }
 
 .audience-captions .cursor-blink {
   display: inline-block;
-  width: 4px;
+  width: 3px;
   height: 1.1em;
   background: var(--brand-purple);
   margin-left: 6px;

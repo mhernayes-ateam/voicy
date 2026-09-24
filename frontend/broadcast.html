@@ -207,12 +207,13 @@
       <span id="statusIndicator">Listo para transmitir</span>
     </div>
 
-    <!-- Pantalla Principal de Texto en Tiempo Real -->
+    <!-- Pantalla Principal de Texto en Tiempo Real (Ventana rodante de máximo 2 líneas) -->
     <div class="audience-captions" id="captionsContainer">
-      <div id="captionFinal" class="final-phrase"></div>
-      <div>
-        <span id="captionLive" class="live-phrase">Presioná RECORD para comenzar a hablar...</span>
-        <span class="cursor-blink"></span>
+      <div class="caption-viewport">
+        <div>
+          <span id="captionLive" class="live-phrase">Presioná RECORD para comenzar a hablar...</span>
+          <span class="cursor-blink"></span>
+        </div>
       </div>
     </div>
 
@@ -324,11 +325,13 @@
     }
 
     class WordStreamer {
-      constructor(element) {
+      constructor(element, maxVisibleWords = 11) {
         this.element = element;
+        this.maxVisibleWords = maxVisibleWords;
         this.displayed = [];
         this.target = [];
         this.timer = null;
+        this.lastFullText = '';
       }
 
       streamTo(fullText) {
@@ -336,48 +339,68 @@
           this.element.innerText = '';
           this.displayed = [];
           this.target = [];
+          this.lastFullText = '';
           return;
         }
 
-        const words = fullText.trim().split(/\s+/);
+        const trimmed = fullText.trim();
+        if (trimmed === this.lastFullText) return;
+        this.lastFullText = trimmed;
+
+        const words = trimmed.split(/\s+/).filter(Boolean);
         this.target = words;
 
-        // Si es un texto completamente diferente, empezar de cero
-        if (this.displayed.length > 0 && words[0] !== this.displayed[0]) {
+        // Si es una frase diferente, reiniciar buffer para no mezclar oraciones
+        const currentJoined = this.displayed.join(' ');
+        if (this.displayed.length > 0 && !trimmed.startsWith(currentJoined.slice(0, 15))) {
           this.displayed = [];
         }
 
-        if (this.timer) return;
+        if (this.timer) {
+          clearInterval(this.timer);
+          this.timer = null;
+        }
 
         this.timer = setInterval(() => {
           if (this.displayed.length < this.target.length) {
             const nextWord = this.target[this.displayed.length];
             this.displayed.push(nextWord);
-            this.element.innerText = this.displayed.join(' ');
+
+            // Mantener como MÁXIMO 2 LÍNEAS (descartar palabras antiguas del inicio)
+            const visibleWords = this.displayed.length > this.maxVisibleWords
+              ? this.displayed.slice(-this.maxVisibleWords)
+              : this.displayed;
+
+            this.element.innerText = visibleWords.join(' ');
           } else {
             clearInterval(this.timer);
             this.timer = null;
+
+            const visibleWords = this.displayed.length > this.maxVisibleWords
+              ? this.displayed.slice(-this.maxVisibleWords)
+              : this.displayed;
+            this.element.innerText = visibleWords.join(' ');
           }
-        }, 50); // 50ms por palabra: efecto teletipo fluido y natural
+        }, 45); // 45ms por palabra: efecto teletipo fluido y natural
       }
     }
 
-    const streamerLive = new WordStreamer(captionLive);
+    const streamerLive = new WordStreamer(captionLive, 11);
 
     function renderCaptions() {
       let activeText = '';
       if (currentMode === 'original') {
-        activeText = originalFinal || originalPartial;
+        // En original: priorizar texto en vivo mientras se habla
+        activeText = originalPartial || originalFinal;
       } else if (currentMode === 'es') {
-        activeText = spanishFinal || originalFinal || originalPartial;
+        activeText = spanishFinal || originalPartial || originalFinal;
       } else if (currentMode === 'en') {
-        activeText = englishFinal || originalFinal || originalPartial;
+        activeText = englishFinal || originalPartial || originalFinal;
       } else if (currentMode === 'pt') {
-        activeText = portugueseFinal || originalFinal || originalPartial;
+        activeText = portugueseFinal || originalPartial || originalFinal;
       }
 
       if (activeText) {
-        captionFinal.innerText = ''; // Un solo bloque sin confusiones de gris/blanco
         streamerLive.streamTo(activeText);
       } else {
         streamerLive.streamTo(isBroadcasting ? 'Escuchando al orador...' : 'Presioná RECORD para comenzar a hablar...');
