@@ -2,99 +2,222 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voicy — Subtítulos en Tiempo Real para Conferencias</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Voicy — Subtítulos en Vivo</title>
   <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Firebase Compat SDKs para Realtime Database -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <style>
+    .stage-pill {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .stage-pill:hover, .stage-pill.active {
+      border-color: var(--brand-purple);
+      color: #fff;
+      background: rgba(123, 79, 255, 0.15);
+    }
+  </style>
 </head>
-<body>
+<body style="background: #090B10; overflow-x: hidden;">
 
-  <header class="header-bar">
-    <a href="/" class="brand-logo">
-      <div class="brand-logo-icon">🎙️</div>
-      <span>Voicy<span style="color:var(--brand-cyan);">.live</span></span>
-    </a>
-    <span class="badge-live"><span class="dot"></span> NERDEARLA VIBEATHON 2026</span>
-  </header>
+  <div class="audience-wrapper">
+    <!-- Topbar Mobile -->
+    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 14px;">
+      <a href="/" class="brand-logo" style="font-size:18px;">
+        <div class="brand-logo-icon" style="width:26px; height:26px; font-size:13px;">🎙️</div>
+        <span>Voicy</span>
+      </a>
 
-  <main style="max-width: 860px; margin: 50px auto 40px; padding: 0 20px; text-align: center;">
-    <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 16px; border-radius:999px; background:rgba(123,79,255,0.12); border:1px solid rgba(123,79,255,0.3); font-size:12px; font-weight:700; color:#A78BFA; margin-bottom:16px;">
-      ⚡ Gemini 3.5 Live (STT) + Gemini Flash (EN➔ES) + Firebase RTDB
+      <!-- Selector de Idioma: ORIGINAL vs TRADUCCIÓN -->
+      <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:12px; border:1px solid var(--border);">
+        <button id="btnLangOriginal" class="btn btn-sm" style="padding:6px 14px; font-size:11px; border-radius:9px; background:var(--brand-purple); color:#fff;" onclick="setLanguage('original')">
+          ORIGINAL
+        </button>
+        <button id="btnLangTranslate" class="btn btn-sm" style="padding:6px 14px; font-size:11px; border-radius:9px; background:transparent; color:var(--text-muted);" onclick="setLanguage('translated')">
+          <span id="lblTargetLang">TRADUCCIÓN</span>
+        </button>
+      </div>
     </div>
 
-    <h1 style="font-family:var(--font-h); font-size:clamp(32px, 5.5vw, 50px); font-weight:800; line-height:1.15; letter-spacing:-1px;">
-      Transcripción y traducción simultánea a escala
-    </h1>
-
-    <p style="font-size:16px; color:var(--text-muted); max-width:620px; margin:16px auto 32px; line-height:1.6;">
-      Plataforma open source diseñada para conferencias como Nerdearla: múltiples escenarios en simultáneo, baja latencia, traducción inglés ➔ español y distribución masiva para celulares.
-    </p>
-
-    <!-- Selector de Escenarios Simultáneos (Requisito Multi-Stage Nerdearla) -->
-    <div class="card" style="text-align:left; margin-bottom:36px; border-color:rgba(123,79,255,0.3);">
-      <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:14px;">
-        🏛️ Escenarios en Vivo Simultáneos (Multi-Session Demo)
-      </div>
-
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
-        <!-- Escenario 1: Main Stage -->
-        <div style="background:var(--bg-input); padding:16px; border-radius:14px; border:1px solid var(--border);">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <strong style="font-size:16px; color:#fff;">Main Stage</strong>
-            <span class="badge-live" style="font-size:9.5px; padding:2px 8px;"><span class="dot"></span> LIVE</span>
+    <!-- Título de la Charla y Selector de Sala -->
+    <div style="margin-top:6px; margin-bottom: 20px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:10px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="badge-live" style="font-size:10px; padding:2px 8px;"><span class="dot"></span> LIVE</span>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">
+              Subtítulos en Vivo
+            </span>
           </div>
-          <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px;">
-            Keynotes principales, Cloud Computing & AI Architecture.
-          </p>
-          <div style="display:flex; gap:8px;">
-            <a href="/audience.html?session=main-stage" class="btn btn-sm btn-primary" style="flex:1; font-size:12px;">📱 Audiencia</a>
-            <a href="/broadcast.html?session=main-stage" class="btn btn-sm btn-outline" style="flex:1; font-size:12px;">🎙️ Speaker</a>
-          </div>
+          <h2 id="sessionTitle" style="font-family:var(--font-h); font-size:22px; font-weight:700; margin-top:4px;">
+            MAIN STAGE
+          </h2>
         </div>
 
-        <!-- Escenario 2: AI & Data Stage -->
-        <div style="background:var(--bg-input); padding:16px; border-radius:14px; border:1px solid var(--border);">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <strong style="font-size:16px; color:#fff;">AI & Data Stage</strong>
-            <span class="badge-live" style="font-size:9.5px; padding:2px 8px;"><span class="dot"></span> LIVE</span>
-          </div>
-          <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px;">
-            Modelos fundacionales, Gemini Live API & Open Source.
-          </p>
-          <div style="display:flex; gap:8px;">
-            <a href="/audience.html?session=ai-stage" class="btn btn-sm btn-primary" style="flex:1; font-size:12px;">📱 Audiencia</a>
-            <a href="/broadcast.html?session=ai-stage" class="btn btn-sm btn-outline" style="flex:1; font-size:12px;">🎙️ Speaker</a>
-          </div>
+        <!-- Selector rápido de Escenario -->
+        <div style="display:flex; gap:6px;">
+          <a href="/?session=main-stage" id="tabMainStage" class="stage-pill active">Main Stage</a>
+          <a href="/?session=ai-stage" id="tabAiStage" class="stage-pill">AI Stage</a>
         </div>
       </div>
     </div>
 
-    <!-- Cards de Características Técnicas -->
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:18px; text-align:left;">
-      <div class="card">
-        <div style="font-size:22px; margin-bottom:8px;">⚡</div>
-        <h3 style="font-family:var(--font-h); font-size:16px; font-weight:700; margin-bottom:4px;">AudioWorklet 16kHz</h3>
-        <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
-          Resampling lineal stateful continuo de 100ms. Micrófono o audio de prueba.
-        </p>
-      </div>
-
-      <div class="card">
-        <div style="font-size:22px; margin-bottom:8px;">🌐</div>
-        <h3 style="font-family:var(--font-h); font-size:16px; font-weight:700; margin-bottom:4px;">Traducción EN ➔ ES</h3>
-        <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
-          Gemini Flash traduce segmentos al español preservando términos técnicos.
-        </p>
-      </div>
-
-      <div class="card">
-        <div style="font-size:22px; margin-bottom:8px;">🚀</div>
-        <h3 style="font-family:var(--font-h); font-size:16px; font-weight:700; margin-bottom:4px;">Escalabilidad 30+ Salas</h3>
-        <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
-          1 stream por sala hacia Gemini; miles de celulares consumiendo vía Firebase RTDB.
-        </p>
+    <!-- Pantalla Principal de Subtítulos -->
+    <div class="audience-captions" id="captionsContainer">
+      <div id="captionFinal" class="final-phrase"></div>
+      <div>
+        <span id="captionLive" class="live-phrase">Esperando inicio de la conferencia...</span>
+        <span class="cursor-blink"></span>
       </div>
     </div>
-  </main>
 
+    <!-- Footer Mobile -->
+    <div style="margin-top:auto; padding-top:20px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--text-dim); border-top:1px solid var(--border);">
+      <span>Nerdearla Vibeathon 2026</span>
+      <span>Gemini 3.5 Live & Flash</span>
+    </div>
+  </div>
+
+  <script>
+    // Extraer sessionId de URLSearchParams (?session=main-stage) o del path (/session/main-stage)
+    const urlParams = new URLSearchParams(window.location.search);
+    const pathParts = window.location.pathname.split('/');
+    const pathSession = pathParts[2] && pathParts[2] !== 'index.html' && pathParts[2] !== 'audience.html' && pathParts[2] !== 'session.html' ? pathParts[2] : null;
+    const sessionId = urlParams.get('session') || urlParams.get('s') || pathSession || 'main-stage';
+    
+    document.getElementById('sessionTitle').innerText = sessionId.replace('-', ' ').toUpperCase();
+
+    // Actualizar tabs de escenario
+    const tabMainStage = document.getElementById('tabMainStage');
+    const tabAiStage = document.getElementById('tabAiStage');
+    if (sessionId === 'ai-stage') {
+      tabMainStage.classList.remove('active');
+      tabAiStage.classList.add('active');
+    } else {
+      tabMainStage.classList.add('active');
+      tabAiStage.classList.remove('active');
+    }
+
+    const captionFinal = document.getElementById('captionFinal');
+    const captionLive = document.getElementById('captionLive');
+    const btnLangOriginal = document.getElementById('btnLangOriginal');
+    const btnLangTranslate = document.getElementById('btnLangTranslate');
+    const lblTargetLang = document.getElementById('lblTargetLang');
+
+    let currentMode = 'original'; // 'original' | 'translated'
+    let currentTargetLang = 'es';
+
+    // Datos en memoria
+    let originalPartial = '';
+    let originalFinal = '';
+    let translatedFinal = '';
+
+    function setLanguage(mode) {
+      currentMode = mode;
+      if (mode === 'original') {
+        btnLangOriginal.style.background = 'var(--brand-purple)';
+        btnLangOriginal.style.color = '#fff';
+        btnLangTranslate.style.background = 'transparent';
+        btnLangTranslate.style.color = 'var(--text-muted)';
+      } else {
+        btnLangTranslate.style.background = 'var(--brand-purple)';
+        btnLangTranslate.style.color = '#fff';
+        btnLangOriginal.style.background = 'transparent';
+        btnLangOriginal.style.color = 'var(--text-muted)';
+      }
+      renderCaptions();
+    }
+
+    // Renderizado suave
+    let renderTimer = null;
+    function renderCaptions() {
+      if (!renderTimer) {
+        renderTimer = setTimeout(() => {
+          if (currentMode === 'original') {
+            captionFinal.innerText = originalFinal;
+            captionLive.innerText = originalPartial || (originalFinal ? '' : 'Listening to speaker...');
+          } else {
+            // Modo Traducción (Español o Inglés según el orador)
+            captionFinal.innerText = translatedFinal;
+            captionLive.innerText = originalPartial ? `[Traduciendo...]` : (translatedFinal ? '' : 'Esperando traducción...');
+          }
+          renderTimer = null;
+        }, 60);
+      }
+    }
+
+    // Configuración Firebase Realtime Database
+    const firebaseConfig = {
+      apiKey: "AIzaSyBI6soKQDeMSxWwQxLjjBwVQPm34ulet4E",
+      appId: "1:774183311627:web:3bf35ac8094622b68d6a0e",
+      databaseURL: "https://voicy-3fca6-default-rtdb.firebaseio.com",
+      projectId: "voicy-3fca6"
+    };
+
+    let rtdbConnected = false;
+
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      const db = firebase.database();
+      
+      // Escuchar estado en vivo de la sesión seleccionada
+      db.ref(`liveSessions/${sessionId}`).on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          rtdbConnected = true;
+          originalPartial = data.current?.partialText || '';
+          originalFinal = data.lastFinal?.text || '';
+          
+          if (data.activeTranslation?.text) {
+            translatedFinal = data.activeTranslation.text;
+            currentTargetLang = data.activeTranslation.targetLang || 'es';
+            lblTargetLang.innerText = currentTargetLang === 'es' ? 'ESPAÑOL' : 'ENGLISH';
+          }
+          renderCaptions();
+        }
+      });
+    } catch (e) {
+      console.warn("RTDB offline en cliente:", e.message);
+    }
+
+    // Fallback de desarrollo local por WebSocket directo
+    setTimeout(() => {
+      if (!rtdbConnected && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        console.log("Activando listener local WebSocket para pruebas inmediatas...");
+        const ws = new WebSocket(`ws://localhost:8090/ws/broadcast/${sessionId}`);
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'interim') {
+              originalPartial = msg.data.partialText || '';
+              renderCaptions();
+            } else if (msg.type === 'final') {
+              originalFinal = msg.data.segment.text || '';
+              originalPartial = '';
+              renderCaptions();
+            } else if (msg.type === 'translation') {
+              translatedFinal = msg.data.text || '';
+              currentTargetLang = msg.data.targetLang || 'es';
+              lblTargetLang.innerText = currentTargetLang === 'es' ? 'ESPAÑOL' : 'ENGLISH';
+              renderCaptions();
+            }
+          } catch (e) {}
+        };
+      }
+    }, 1500);
+  </script>
 </body>
 </html>
