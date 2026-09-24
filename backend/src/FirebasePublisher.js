@@ -8,8 +8,8 @@ import admin from 'firebase-admin';
  */
 export class FirebasePublisher {
   constructor(options = {}) {
-    this.projectId = options.projectId || process.env.FIREBASE_PROJECT_ID || 'voicy-live';
-    this.databaseURL = options.databaseURL || process.env.FIREBASE_DATABASE_URL || 'https://voicy-live-default-rtdb.firebaseio.com';
+    this.projectId = options.projectId || process.env.FIREBASE_PROJECT_ID || 'voicy-3fca6';
+    this.databaseURL = options.databaseURL || process.env.FIREBASE_DATABASE_URL || 'https://voicy-3fca6-default-rtdb.firebaseio.com';
     this.rtdb = null;
     this.isInitialized = false;
 
