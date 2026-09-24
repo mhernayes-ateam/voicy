@@ -31,12 +31,14 @@ MICRÓFONO (Browser Broadcaster)
 ┌────────────────────────────────────────────────────────┐
 │ Cloud Run / Local Backend (caption-stream)             │
 │                                                        │
-│  ├── SessionManager (estado de conferencia)            │
-│  ├── GeminiConnectionManager                           │
-│  │    ├── Ciclo de vida y límites (reconnect < 10 min)  │
-│  │    ├── Session Resumption & GoAway handling         │
-│  │    └── Watchdog de silencio / detección freeze      │
-│  └── SegmentManager (segmentId, seq, timestamps)       │
+│  ConferenceSession (45-60 min)                         │
+│  ├── Broadcaster WebSocket                             │
+│  ├── SegmentManager (sequence & segmentId GLOBAL)      │
+│  └── GeminiConnectionManager                           │
+│       ├── TranscriptionSession #1 (0 ➔ ~9 min)         │
+│       │    └─► Rotación limpia al finalizar segmento   │
+│       ├── TranscriptionSession #2 (~9 ➔ ~18 min)       │
+│       └── Session Resumption / GoAway / Watchdog       │
 └───────────────────────────┬────────────────────────────┘
                             │ WebSocket
                             ▼
@@ -106,16 +108,28 @@ if (serverContent.inputTranscription) {
 }
 ```
 
-### 3.4. Resiliencia, Límite de 10 Minutos y Watchdog (`GeminiConnectionManager`)
-- **Límite de 10 minutos de Gemini Live Transcribe**:
-  - `gemini-3.5-transcribe-live` tiene un límite operativo de 10 minutos por sesión WebSocket continua.
-  - El `GeminiConnectionManager` almacena el `geminiSessionHandle` para **Session Resumption**.
-  - Reconexión programada transparente (o reacción inmediata a mensajes `GoAway`) antes de alcanzar el minuto 9:30, preservando el contexto y la continuidad de la conferencia.
+### 3.4. Ciclo de Vida: ConferenceSession vs TranscriptionSessions (~9 min)
+- **El límite de 10 minutos de Gemini Transcribe Live**:
+  - `gemini-3.5-transcribe-live` admite streaming continuo por hasta 10 minutos por sesión.
+  - La arquitectura **desacopla** la sesión de la conferencia de la conexión con el modelo:
+    ```text
+    ConferenceSession (45 min)
+      ├── TranscriptionSession #1 (0 ➔ ~9 min)
+      ├── TranscriptionSession #2 (~9 ➔ ~18 min)
+      └── TranscriptionSession #3 (~18 ➔ ~27 min)
+    ```
+  - **Continuidad Absoluta:** `SegmentManager` es el dueño de la secuencia (`sequence`). Cuando una sesión de Gemini se renueva a los 9 minutos, la secuencia no se reinicia; el segmento $N$ finaliza en la sesión anterior y el segmento $N+1$ arranca en la nueva sesión. La audiencia jamás percibe la transición.
+  - **Session Resumption & GoAway:** Se mantiene la captura del `sessionHandle` para reconexiones por caída de red o avisos `GoAway`.
 - **Watchdog Anti-Freeze**:
   - Registra: `lastAudioSentAt`, `lastGeminiMessageAt`, `lastInterimAt`, `lastFinalAt`.
-  - Si se detecta nivel de audio activo (RMS / speech) pero transcurren > 4 segundos sin recibir mensajes de Gemini, se clasifica el estado como degradado y se gatilla una reconexión controlada vía sesión handle.
+  - Si se detecta nivel de audio activo (RMS / speech) pero transcurren > 4 segundos sin recibir mensajes de Gemini, se clasifica el estado como degradado y se gatilla una rotación/reconexión inmediata.
 
-### 3.5. Estructura de Realtime Database
+### 3.5. Métricas Clave de Latencia Desacopladas
+No se utiliza un número único genérico de latencia. Se miden de forma independiente:
+- **`partialLatencyMs` (Target: < 1.5s):** Tiempo desde que el orador pronuncia la palabra hasta que el `interimInputTranscription` se renderiza en pantalla. Define la agilidad percibida.
+- **`finalLatencyMs` (Target: < 3.0s):** Tiempo hasta que la frase se consolida de forma definitiva en `inputTranscription`.
+
+### 3.6. Estructura de Realtime Database
 ```json
 {
   "liveSessions": {
@@ -133,7 +147,8 @@ if (serverContent.inputTranscription) {
         "text": "Hello everyone."
       },
       "metrics": {
-        "latencyMs": 750,
+        "partialLatencyMs": 620,
+        "finalLatencyMs": 2100,
         "health": "healthy"
       }
     }
@@ -145,46 +160,29 @@ if (serverContent.inputTranscription) {
 
 ## 4. Fases de Ejecución
 
-### Fase 1: Entorno, Git & Proyecto Firebase
-- [ ] Inicializar Git en `/Users/martinhernayes/Desktop/Web Catalog/voicy`.
-- [ ] Vincular remoto en GitHub (`mhernayes-ateam/voicy`).
-- [ ] Inicializar configuración de Firebase (`firebase.json`, `.firebaserc` para `voicy-live`).
-- [ ] Estructura base de carpetas:
-  - `frontend/` (HTML, CSS, JS de clientes, AudioWorklet).
-  - `backend/` (Node.js WebSocket server, Gemini Live client, managers).
+### Fase 1: Entorno, Git & Proyecto Firebase (COMPLETADA)
+- [x] Inicializar Git en `/Users/martinhernayes/Desktop/Web Catalog/voicy`.
+- [x] Configuración de Firebase (`firebase.json`, `.firebaserc` para `voicy-live`).
+- [x] Estructura base de carpetas `frontend/` y `backend/`.
 
-### Fase 2: Ingesta de Audio (Frontend Broadcaster)
-- [ ] Implementar `StreamingPCMResampler` en `frontend/worklets/pcm-processor.js` (interpolación fraccional continua).
-- [ ] Captura de micrófono con `AudioWorkletNode` y batching de 100 ms (1.600 muestras / 3.200 bytes).
-- [ ] Envío por WebSocket binario (`ArrayBuffer`).
-- [ ] UI `/broadcast/test`:
-  - Botones START / STOP.
-  - Indicadores: Micrófono (OK), WebSocket (Conectado), Gemini (Conectado/Degradado).
-  - Medidor de nivel de audio (Vúmetro).
-  - Monitor en vivo de transcript y latencia.
+### Fase 2: Ingesta de Audio (Frontend Broadcaster) (COMPLETADA)
+- [x] `StreamingPCMResampler` en `frontend/worklets/pcm-processor.js`.
+- [x] Batching de 100 ms (1.600 muestras / 3.200 bytes en Int16 mono little endian).
+- [x] Panel de speaker `/broadcast/test` con vúmetro y controles START/STOP.
 
-### Fase 3: Backend de Transmisión & Gemini Live
-- [ ] Servidor HTTP + WebSocket en `/ws/broadcast/:sessionId`.
-- [ ] `GeminiConnectionManager`:
-  - Conexión WebSocket a `gemini-3.5-transcribe-live`.
-  - Configuración con `mode: "SMART"` y `customVocabulary`.
-  - Soporte de Session Resumption & GoAway.
-  - Watchdog de actividad.
-- [ ] `SegmentManager`:
-  - Escucha de `interimInputTranscription` (partial) e `inputTranscription` (final).
-  - Asignación de `segmentId` y `sequence`.
+### Fase 3: Backend de Transmisión & Gemini Live (COMPLETADA)
+- [x] Servidor HTTP + WebSocket en `/ws/broadcast/:sessionId`.
+- [x] `GeminiConnectionManager` con soporte de rotación de `TranscriptionSession` a los 9 min, GoAway, resumption y watchdog.
+- [x] `SegmentManager` con `sequence` global monótono que persiste entre rotaciones de Gemini.
 
-### Fase 4: Sincronización en Tiempo Real & Audiencia
-- [ ] Firebase Admin SDK publicando en RTDB (`/liveSessions/:sessionId`).
-- [ ] UI de audiencia `/session/test`:
-  - Mobile-first, diseño oscuro, badge `LIVE ●`.
-  - Listener sobre `/liveSessions/test/current`.
-  - Throttling visual de 80–120 ms para transiciones suaves de texto.
+### Fase 4: Sincronización en Tiempo Real & Audiencia (COMPLETADA)
+- [x] Firebase Admin SDK publicando en RTDB (`/liveSessions/:sessionId`).
+- [x] UI de audiencia `/session/test` con render throttling de 100 ms.
 
-### Fase 5: Validación End-to-End (Hito de Iteración 1)
-- [ ] Ventana A: `/broadcast/test` con micrófono activo hablando en inglés.
-- [ ] Ventana B: `/session/test` en otro dispositivo/pestaña.
-- [ ] Criterio de éxito: Transcripción fluida en tiempo real con latencia **< 2 segundos**.
+### Fase 5: Validación End-to-End (Prueba en Vivo)
+- [ ] Configurar `GEMINI_API_KEY` en `backend/.env`.
+- [ ] Ejecutar prueba local de transmisión de voz (speaker ➔ audiencia).
+- [ ] Verificar `partialLatencyMs < 1.5s` y `finalLatencyMs < 3.0s`.
 
 ---
 

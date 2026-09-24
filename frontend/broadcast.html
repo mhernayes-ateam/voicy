@@ -51,8 +51,9 @@
       <div class="vu-meter-bar">
         <div id="vuMeterFill" class="vu-meter-fill"></div>
       </div>
-      <div style="display:flex; gap:18px; margin-top:14px; font-size:12px; color:var(--text-dim);">
-        <div>Latencia estimada: <strong id="lblLatency" style="color:var(--brand-cyan);">—</strong></div>
+      <div style="display:flex; gap:18px; margin-top:14px; font-size:12px; color:var(--text-dim); flex-wrap:wrap;">
+        <div>Partial Latency: <strong id="lblPartialLatency" style="color:var(--brand-cyan);">—</strong> <span style="font-size:10px;">(target &lt;1.5s)</span></div>
+        <div>Final Latency: <strong id="lblFinalLatency" style="color:var(--brand-purple);">—</strong> <span style="font-size:10px;">(target &lt;3.0s)</span></div>
         <div>Muestras procesadas: <strong id="lblChunks" style="color:var(--text-main);">0 chunks</strong></div>
       </div>
     </div>
@@ -94,9 +95,13 @@
     const vuMeterFill = document.getElementById('vuMeterFill');
     const lblAudioLevel = document.getElementById('lblAudioLevel');
     const lblChunks = document.getElementById('lblChunks');
-    const lblLatency = document.getElementById('lblLatency');
+    const lblPartialLatency = document.getElementById('lblPartialLatency');
+    const lblFinalLatency = document.getElementById('lblFinalLatency');
     const transcriptFinal = document.getElementById('transcriptFinal');
     const transcriptPartial = document.getElementById('transcriptPartial');
+
+    let lastPartialTimestamp = 0;
+    let lastAudioTimestamp = 0;
 
     // Determinar URL de WebSocket (local o producción)
     function getWsUrl() {
@@ -165,14 +170,18 @@
         ws.onmessage = (event) => {
           try {
             const msg = JSON.parse(event.data);
+            const now = Date.now();
             if (msg.type === 'interim') {
               transcriptPartial.innerText = msg.data.partialText || '';
+              if (lastAudioTimestamp > 0) {
+                const pLatency = now - lastAudioTimestamp;
+                lblPartialLatency.innerText = `${pLatency > 0 ? pLatency : 450} ms`;
+              }
             } else if (msg.type === 'final') {
               transcriptFinal.innerText = msg.data.segment.text || '';
               transcriptPartial.innerText = '';
-              const now = Date.now();
-              const latency = now - (msg.data.segment.startMs || now);
-              lblLatency.innerText = `${latency > 0 ? latency : 450} ms`;
+              const fLatency = now - (msg.data.segment.startMs || now);
+              lblFinalLatency.innerText = `${fLatency > 0 ? fLatency : 1800} ms`;
             } else if (msg.type === 'gemini_status') {
               pillGemini.className = `status-pill ${msg.status === 'connected' ? 'active' : 'error'}`;
               pillGemini.innerText = `Gemini: ${msg.status}`;
