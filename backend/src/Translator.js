@@ -1,8 +1,8 @@
 /**
  * Translator (Gemini Flash) - Bidireccional Inteligente (EN ➔ ES / ES ➔ EN)
  * 
- * Cumple con el requisito opcional valorado de Nerdearla:
- * - Si el orador habla en Inglés ➔ Traduce al Español.
+ * Cumple con el requisito de Nerdearla:
+ * - Si el orador habla en Inglés ➔ Traduce al Español neutro/rioplatense profesional.
  * - Si el orador habla en Español ➔ Traduce al Inglés.
  * - Preserva términos técnicos, marcas y código (Kubernetes, React, Gemini, Nerdearla, etc.).
  */
@@ -31,14 +31,15 @@ export class Translator {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `You are an expert conference simultaneous interpreter for Nerdearla.
+              text: `You are an expert simultaneous conference interpreter for Nerdearla.
 Task:
-1. Detect if the input sentence is primarily English or Spanish.
+1. Detect if the input is primarily English or Spanish.
 2. If it is English, translate it to natural, fluent Latin American Spanish.
 3. If it is Spanish, translate it to natural, fluent English.
-4. Strictly preserve technical terms, software libraries, product names, code keywords, and brands verbatim (e.g., Kubernetes, React, Gemini, TypeScript, Nerdearla, Cloud Run, Docker).
+4. If ambiguous or mixed, translate to Spanish.
+5. Strictly preserve technical terms, software libraries, product names, code keywords, and brands verbatim (e.g., Kubernetes, React, Gemini, TypeScript, Nerdearla, Cloud Run, Docker, AWS, GCP, Python).
 
-Format your response as valid JSON:
+Respond ONLY with valid JSON:
 {
   "translation": "<translated text>",
   "sourceLang": "en" | "es",
@@ -51,7 +52,7 @@ Input: "${text}"`
           generationConfig: {
             temperature: 0.1,
             responseMimeType: "application/json",
-            maxOutputTokens: 150
+            maxOutputTokens: 200
           }
         })
       });

@@ -148,12 +148,12 @@
             captionFinal.innerText = originalFinal;
             captionLive.innerText = originalPartial || (originalFinal ? '' : 'Listening to speaker...');
           } else {
-            // Modo Traducción (Español o Inglés según el orador)
+            // Modo Traducción
             captionFinal.innerText = translatedFinal;
-            captionLive.innerText = originalPartial ? `[Traduciendo...]` : (translatedFinal ? '' : 'Esperando traducción...');
+            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (translatedFinal ? '' : 'Esperando traducción...');
           }
           renderTimer = null;
-        }, 60);
+        }, 50);
       }
     }
 
@@ -184,7 +184,7 @@
           if (data.activeTranslation?.text) {
             translatedFinal = data.activeTranslation.text;
             currentTargetLang = data.activeTranslation.targetLang || 'es';
-            lblTargetLang.innerText = currentTargetLang === 'es' ? 'ESPAÑOL' : 'ENGLISH';
+            lblTargetLang.innerText = currentTargetLang === 'es' ? 'TRADUCCIÓN (ES)' : 'TRADUCCIÓN (EN)';
           }
           renderCaptions();
         }
@@ -211,7 +211,7 @@
             } else if (msg.type === 'translation') {
               translatedFinal = msg.data.text || '';
               currentTargetLang = msg.data.targetLang || 'es';
-              lblTargetLang.innerText = currentTargetLang === 'es' ? 'ESPAÑOL' : 'ENGLISH';
+              lblTargetLang.innerText = currentTargetLang === 'es' ? 'TRADUCCIÓN (ES)' : 'TRADUCCIÓN (EN)';
               renderCaptions();
             }
           } catch (e) {}

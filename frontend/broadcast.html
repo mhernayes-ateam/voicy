@@ -202,10 +202,10 @@
             captionLive.innerText = originalPartial || (originalFinal ? '' : (isBroadcasting ? 'Escuchando al orador...' : 'Presioná RECORD para comenzar a hablar...'));
           } else {
             captionFinal.innerText = translatedFinal;
-            captionLive.innerText = originalPartial ? '[Traduciendo...]' : (translatedFinal ? '' : (isBroadcasting ? 'Esperando traducción...' : 'Presioná RECORD para comenzar a hablar...'));
+            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (translatedFinal ? '' : (isBroadcasting ? 'Escuchando para traducir...' : 'Presioná RECORD para comenzar a hablar...'));
           }
           renderTimer = null;
-        }, 60);
+        }, 50);
       }
     }
 
@@ -292,7 +292,7 @@
             } else if (msg.type === 'translation') {
               translatedFinal = msg.data.text || '';
               currentTargetLang = msg.data.targetLang || 'es';
-              lblTargetLang.innerText = currentTargetLang === 'es' ? 'ESPAÑOL' : 'ENGLISH';
+              lblTargetLang.innerText = currentTargetLang === 'es' ? 'TRADUCCIÓN (ES)' : 'TRADUCCIÓN (EN)';
               renderCaptions();
             } else if (msg.type === 'gemini_status') {
               if (msg.status === 'connected') {

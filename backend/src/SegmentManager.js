@@ -2,9 +2,10 @@
  * SegmentManager
  * 
  * Gestiona el ciclo de vida de los segmentos de audio/texto.
- * Emplea la fuente de verdad de Gemini:
- * - interimInputTranscription -> actualiza el estado parcial actual.
+ * Emplea la fuente de verdad de Gemini con auto-finalización inteligente por silencio:
+ * - interimInputTranscription -> actualiza el estado parcial actual e inicia timer de silencio.
  * - inputTranscription        -> consolida el segmento final e incrementa la secuencia.
+ * - silenceFinalizeTimer      -> consolida el texto tras 1.8s de silencio si Gemini aún no envió final.
  */
 
 function generateSegmentId(prefix = 'seg') {
@@ -24,9 +25,11 @@ export class SegmentManager {
 
     this.currentPartialText = '';
     this.lastFinalSegment = null;
+    this.silenceFinalizeTimer = null;
   }
 
   handleInterim(text) {
+    if (!text) return;
     this.currentPartialText = text;
     this.notifyUpdate({
       type: 'interim',
@@ -35,17 +38,39 @@ export class SegmentManager {
       partialText: text,
       updatedAt: Date.now()
     });
+
+    // Auto-finalizar tras 1.8s de pausa en la voz para disparar la traducción de inmediato
+    if (this.silenceFinalizeTimer) clearTimeout(this.silenceFinalizeTimer);
+    this.silenceFinalizeTimer = setTimeout(() => {
+      if (this.currentPartialText && this.currentPartialText.trim().length > 0) {
+        this.handleFinal(this.currentPartialText.trim());
+      }
+    }, 1800);
   }
 
   handleFinal(finalText) {
+    if (this.silenceFinalizeTimer) {
+      clearTimeout(this.silenceFinalizeTimer);
+      this.silenceFinalizeTimer = null;
+    }
+
+    if (!finalText || !finalText.trim()) return;
+
+    const trimmed = finalText.trim();
     const endMs = Date.now();
+
+    // Evitar procesar el mismo texto exacto dos veces seguidas en menos de 2.5s
+    if (this.lastFinalSegment && this.lastFinalSegment.text === trimmed && (endMs - this.lastFinalSegment.endMs) < 2500) {
+      return;
+    }
+
     const finalSegment = {
       sessionId: this.sessionId,
       segmentId: this.currentSegmentId,
       sequence: this.sequence,
       startMs: this.segmentStartTime,
       endMs: endMs,
-      text: finalText,
+      text: trimmed,
       createdAt: new Date().toISOString()
     };
 
