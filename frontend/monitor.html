@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Voicy — Panel de Monitoreo de Producción</title>
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Firebase Compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+</head>
+<body style="background: #090B10; padding: 24px 20px;">
+
+  <div style="max-width: 1100px; margin: 0 auto;">
+    <!-- Topbar Producción -->
+    <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 18px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div class="brand-logo-icon" style="width:34px; height:34px; font-size:18px;">🎛️</div>
+        <div>
+          <h1 style="font-family:var(--font-h); font-size:22px; font-weight:800; color:#fff;">
+            Panel de Control de Producción — Nerdearla 2026
+          </h1>
+          <div style="font-size:12px; color:var(--text-muted);">
+            Monitoreo en tiempo real de escenarios concurrentes, latencias y feeds de OBS
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="badge-live"><span class="dot"></span> SISTEMA ACTIVO</span>
+      </div>
+    </header>
+
+    <!-- Grid de Escenarios Concurrentes -->
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+      
+      <!-- Stage 1 -->
+      <div class="card" id="cardStage1">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Escenario Principal</div>
+            <h2 style="font-size:20px; font-weight:700; color:#fff;">Stage 1</h2>
+          </div>
+          <span class="status-pill" id="badgeStage1">Inactivo</span>
+        </div>
+
+        <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; padding:14px; min-height:85px; margin-bottom:14px; font-size:13px; line-height:1.5;">
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">ÚLTIMO TEXTO RECONOCIDO:</div>
+          <div id="textStage1" style="color:#E2E8F0;">Esperando transmisión...</div>
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a href="/broadcast.html?session=stage-1" target="_blank" class="btn btn-sm btn-primary" style="flex:1; font-size:11px;">🎙️ Transmitir</a>
+          <a href="/?session=stage-1" target="_blank" class="btn btn-sm btn-outline" style="flex:1; font-size:11px;">📱 Audiencia</a>
+          <a href="/overlay.html?session=stage-1&lang=es" target="_blank" class="btn btn-sm btn-outline" style="flex:1; font-size:11px;">🎥 OBS Overlay (ES)</a>
+        </div>
+      </div>
+
+      <!-- Stage 2 -->
+      <div class="card" id="cardStage2">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">AI & Cloud Stage</div>
+            <h2 style="font-size:20px; font-weight:700; color:#fff;">Stage 2</h2>
+          </div>
+          <span class="status-pill" id="badgeStage2">Inactivo</span>
+        </div>
+
+        <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; padding:14px; min-height:85px; margin-bottom:14px; font-size:13px; line-height:1.5;">
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">ÚLTIMO TEXTO RECONOCIDO:</div>
+          <div id="textStage2" style="color:#E2E8F0;">Esperando transmisión...</div>
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a href="/broadcast.html?session=stage-2" target="_blank" class="btn btn-sm btn-primary" style="flex:1; font-size:11px;">🎙️ Transmitir</a>
+          <a href="/?session=stage-2" target="_blank" class="btn btn-sm btn-outline" style="flex:1; font-size:11px;">📱 Audiencia</a>
+          <a href="/overlay.html?session=stage-2&lang=es" target="_blank" class="btn btn-sm btn-outline" style="flex:1; font-size:11px;">🎥 OBS Overlay (ES)</a>
+        </div>
+      </div>
+
+      <!-- Stage 3 -->
+      <div class="card" id="cardStage3">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">DevOps & Security</div>
+            <h2 style="font-size:20px; font-weight:700; color:#fff;">Stage 3</h2>
+          </div>
+          <span class="status-pill" id="badgeStage3">Inactivo</span>
+        </div>
+
+        <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; padding:14px; min-height:85px; margin-bottom:14px; font-size:13px; line-height:1.5;">
+          <div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">ÚLTIMO TEXTO RECONOCIDO:</div>
+          <div id="textStage3" style="color:#E2E8F0;">Esperando transmisión...</div>
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a href="/broadcast.html?session=stage-3" target="_blank" class="btn btn-sm btn-primary" style="flex:1; font-size:11px;">🎙️ Transmitir</a>
+          <a href="/?session=stage-3" target="_blank" class="btn btn-sm btn-outline" style="flex:1; font-size:11px;">📱 Audiencia</a>
+          <a href="/overlay.html?session=stage-3&lang=es" target="_blank" class="btn btn-sm btn-outline" style="flex:1; font-size:11px;">🎥 OBS Overlay (ES)</a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Guía Rápida para el Operador de Streaming -->
+    <div class="card" style="margin-top: 24px; border-color: rgba(123, 79, 255, 0.25);">
+      <h3 style="font-size:16px; font-weight:700; margin-bottom:8px; color:#fff;">
+        💡 Cómo integrar subtítulos en OBS / vMix para YouTube y Twitch:
+      </h3>
+      <ol style="font-size:13px; color:var(--text-muted); padding-left:20px; line-height:1.7;">
+        <li>En OBS Studio, creá una fuente de tipo <strong>"Navegador" (Browser Source)</strong>.</li>
+        <li>Pegá la URL del Overlay (ejemplo: <code>https://voicy-3fca6.web.app/overlay.html?session=stage-1&lang=es</code>).</li>
+        <li>Configurá el ancho en <strong>1920</strong> y el alto en <strong>1080</strong>, y marcá <em>"Controlar audio a través de OBS"</em> desactivado.</li>
+        <li>¡Listo! Los subtítulos aparecerán automáticamente en el tercio inferior del video con fondo transparente y sombra negra.</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBI6soKQDeMSxWwQxLjjBwVQPm34ulet4E",
+      appId: "1:774183311627:web:3bf35ac8094622b68d6a0e",
+      databaseURL: "https://voicy-3fca6-default-rtdb.firebaseio.com",
+      projectId: "voicy-3fca6"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function monitorStage(stageId, badgeId, textId) {
+      db.ref(`liveSessions/${stageId}`).on('value', (snap) => {
+        const val = snap.val();
+        const badge = document.getElementById(badgeId);
+        const text = document.getElementById(textId);
+        if (val && val.status === 'live') {
+          badge.className = 'status-pill active';
+          badge.innerText = '• EN VIVO';
+          const txt = val.lastFinal?.text || val.current?.partialText || 'Transmitiendo...';
+          text.innerText = txt;
+        } else {
+          badge.className = 'status-pill';
+          badge.innerText = 'Inactivo';
+        }
+      });
+    }
+
+    monitorStage('stage-1', 'badgeStage1', 'textStage1');
+    monitorStage('stage-2', 'badgeStage2', 'textStage2');
+    monitorStage('stage-3', 'badgeStage3', 'textStage3');
+  </script>
+</body>
+</html>

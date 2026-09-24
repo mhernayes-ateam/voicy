@@ -75,12 +75,14 @@ export class FirebasePublisher {
         text: payload.text,
         es: payload.es || payload.text,
         en: payload.en || payload.text,
+        pt: payload.pt || payload.text,
         updatedAt: payload.updatedAt
       };
 
-      // 1. Guardar tanto ES como EN en el mapa de traducciones
+      // Guardar ES, EN y PT en el mapa de traducciones
       const esUrl = `${this.databaseURL}/liveSessions/${sessionId}/translations/es.json`;
       const enUrl = `${this.databaseURL}/liveSessions/${sessionId}/translations/en.json`;
+      const ptUrl = `${this.databaseURL}/liveSessions/${sessionId}/translations/pt.json`;
       const activeUrl = `${this.databaseURL}/liveSessions/${sessionId}/activeTranslation.json`;
 
       fetch(esUrl, {
@@ -95,7 +97,13 @@ export class FirebasePublisher {
         body: JSON.stringify({ ...translationPayload, text: payload.en || payload.text })
       }).catch(() => {});
 
-      // 2. Actualizar el puntero activeTranslation
+      fetch(ptUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...translationPayload, text: payload.pt || payload.text })
+      }).catch(() => {});
+
+      // Actualizar el puntero activeTranslation
       await fetch(activeUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

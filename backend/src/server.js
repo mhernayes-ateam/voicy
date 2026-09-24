@@ -81,6 +81,14 @@ const server = http.createServer((req, res) => {
     return serveStaticFile(path.join(FRONTEND_DIR, 'broadcast.html'), res);
   }
 
+  if (pathname.startsWith('/overlay')) {
+    return serveStaticFile(path.join(FRONTEND_DIR, 'overlay.html'), res);
+  }
+
+  if (pathname.startsWith('/monitor')) {
+    return serveStaticFile(path.join(FRONTEND_DIR, 'monitor.html'), res);
+  }
+
   if (pathname.startsWith('/session') || pathname.startsWith('/audience')) {
     return serveStaticFile(path.join(FRONTEND_DIR, 'audience.html'), res);
   }

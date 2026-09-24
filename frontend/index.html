@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Voicy — Subtítulos en Vivo</title>
+  <title>Voicy — Subtítulos en Vivo | Nerdearla 2026</title>
   <link rel="stylesheet" href="/css/style.css">
   
   <!-- Firebase Compat SDKs para Realtime Database -->
@@ -21,6 +21,7 @@
       cursor: pointer;
       text-decoration: none;
       transition: all 0.15s ease;
+      white-space: nowrap;
     }
     .stage-pill:hover, .stage-pill.active {
       border-color: var(--brand-purple);
@@ -29,7 +30,7 @@
     }
 
     .lang-pill {
-      padding: 6px 12px;
+      padding: 6px 11px;
       font-size: 11px;
       font-weight: 700;
       border-radius: 9px;
@@ -38,9 +39,29 @@
       background: transparent;
       color: var(--text-muted);
       transition: all 0.15s ease;
+      white-space: nowrap;
     }
     .lang-pill.active {
       background: var(--brand-purple);
+      color: #fff;
+    }
+
+    .btn-action-mini {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 5px 11px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+    }
+    .btn-action-mini:hover {
+      border-color: rgba(255, 255, 255, 0.25);
       color: #fff;
     }
 
@@ -84,23 +105,24 @@
 <body style="background: #090B10; overflow-x: hidden;">
 
   <div class="audience-wrapper">
-    <!-- Topbar Mobile -->
-    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 14px;">
+    <!-- Topbar Mobile: Co-Branding Nerdearla & Voicy -->
+    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 12px; flex-wrap:wrap; gap:10px;">
       <a href="/" class="brand-logo" style="font-size:18px;">
         <div class="brand-logo-icon" style="width:26px; height:26px; font-size:13px;">🎙️</div>
-        <span>Voicy</span>
+        <span>Voicy <span style="font-size:11px; color:#A78BFA; font-weight:500;">× Nerdearla</span></span>
       </a>
 
-      <!-- Selector de Idioma Triple: ORIGINAL | ESPAÑOL | ENGLISH -->
-      <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:12px; border:1px solid var(--border);">
+      <!-- Selector de Idioma Cuádruple: ORIGINAL | ESPAÑOL | ENGLISH | PORTUGUÊS -->
+      <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:12px; border:1px solid var(--border); overflow-x:auto;">
         <button id="btnLangOriginal" class="lang-pill active" onclick="setLanguage('original')">ORIGINAL</button>
         <button id="btnLangEs" class="lang-pill" onclick="setLanguage('es')">ESPAÑOL</button>
         <button id="btnLangEn" class="lang-pill" onclick="setLanguage('en')">ENGLISH</button>
+        <button id="btnLangPt" class="lang-pill" onclick="setLanguage('pt')">PORTUGUÊS</button>
       </div>
     </div>
 
-    <!-- Título de la Charla y Selector de Sala -->
-    <div style="margin-top:6px; margin-bottom: 20px;">
+    <!-- Título de la Charla y Selector de Escenario (Stage 1 / 2 / 3) -->
+    <div style="margin-top:4px; margin-bottom: 18px;">
       <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:10px;">
         <div>
           <div style="display:flex; align-items:center; gap:8px;">
@@ -114,12 +136,16 @@
           </h2>
         </div>
 
-        <!-- Selector de Escenario (Stage 1 / Stage 2) + Botón QR -->
-        <div style="display:flex; align-items:center; gap:6px;">
+        <!-- Selector de Escenario Rápido + Acciones -->
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
           <a href="/?session=stage-1" id="tabStage1" class="stage-pill active">Stage 1</a>
           <a href="/?session=stage-2" id="tabStage2" class="stage-pill">Stage 2</a>
-          <button class="stage-pill" style="display:inline-flex; align-items:center; gap:4px; padding:5px 9px;" onclick="openQrModal()">
+          <a href="/?session=stage-3" id="tabStage3" class="stage-pill">Stage 3</a>
+          <button class="btn-action-mini" onclick="openQrModal()">
             <span>📱 QR</span>
+          </button>
+          <button class="btn-action-mini" onclick="downloadTranscript('srt')" title="Descargar subtítulos SRT">
+            <span>📥 SRT</span>
           </button>
         </div>
       </div>
@@ -137,7 +163,10 @@
     <!-- Footer Mobile -->
     <div style="margin-top:auto; padding-top:20px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--text-dim); border-top:1px solid var(--border);">
       <span>Nerdearla Vibeathon 2026</span>
-      <span>Gemini 3.5 Live & Flash</span>
+      <div style="display:flex; gap:12px;">
+        <a href="/monitor.html" target="_blank" style="color:var(--text-dim); text-decoration:none;">🎛️ Producción</a>
+        <span>Gemini 3.5 Live & Flash</span>
+      </div>
     </div>
   </div>
 
@@ -149,7 +178,7 @@
       </div>
       <h3 style="font-size:20px; font-weight:700; margin-top:4px;" id="qrStageTitle">Stage 1</h3>
       <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">
-        Escaneá con la cámara de tu celular para abrir esta sala:
+        Escaneá con la cámara de tu celular para abrir esta sala en tu teléfono:
       </p>
 
       <img id="qrImage" class="qr-img" src="" alt="QR Subtítulos">
@@ -177,33 +206,37 @@
     // Actualizar tabs de escenario
     const tabStage1 = document.getElementById('tabStage1');
     const tabStage2 = document.getElementById('tabStage2');
-    if (sessionId === 'stage-2') {
-      tabStage1.classList.remove('active');
-      tabStage2.classList.add('active');
-    } else {
-      tabStage1.classList.add('active');
-      tabStage2.classList.remove('active');
-    }
+    const tabStage3 = document.getElementById('tabStage3');
+    [tabStage1, tabStage2, tabStage3].forEach(t => t.classList.remove('active'));
+    if (sessionId === 'stage-2') tabStage2.classList.add('active');
+    else if (sessionId === 'stage-3') tabStage3.classList.add('active');
+    else tabStage1.classList.add('active');
 
     const captionFinal = document.getElementById('captionFinal');
     const captionLive = document.getElementById('captionLive');
     const btnLangOriginal = document.getElementById('btnLangOriginal');
     const btnLangEs = document.getElementById('btnLangEs');
     const btnLangEn = document.getElementById('btnLangEn');
+    const btnLangPt = document.getElementById('btnLangPt');
 
-    let currentMode = 'original'; // 'original' | 'es' | 'en'
+    let currentMode = 'original'; // 'original' | 'es' | 'en' | 'pt'
 
     // Datos en memoria
     let originalPartial = '';
     let originalFinal = '';
     let spanishFinal = '';
     let englishFinal = '';
+    let portugueseFinal = '';
+
+    // Historial acumulado para exportar a SRT
+    const sessionHistory = [];
 
     function setLanguage(mode) {
       currentMode = mode;
       btnLangOriginal.classList.toggle('active', mode === 'original');
       btnLangEs.classList.toggle('active', mode === 'es');
       btnLangEn.classList.toggle('active', mode === 'en');
+      btnLangPt.classList.toggle('active', mode === 'pt');
       renderCaptions();
     }
 
@@ -216,10 +249,13 @@
             captionLive.innerText = originalPartial || (originalFinal ? '' : 'Listening to speaker...');
           } else if (currentMode === 'es') {
             captionFinal.innerText = spanishFinal || originalFinal;
-            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (spanishFinal ? '' : 'Esperando traducción...');
+            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (spanishFinal ? '' : 'Esperando traducción al español...');
           } else if (currentMode === 'en') {
             captionFinal.innerText = englishFinal || originalFinal;
-            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (englishFinal ? '' : 'Waiting for translation...');
+            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (englishFinal ? '' : 'Waiting for English translation...');
+          } else if (currentMode === 'pt') {
+            captionFinal.innerText = portugueseFinal || originalFinal;
+            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (portugueseFinal ? '' : 'Aguardando tradução para português...');
           }
           renderTimer = null;
         }, 40);
@@ -248,52 +284,35 @@
         if (data) {
           rtdbConnected = true;
           originalPartial = data.current?.partialText || '';
-          originalFinal = data.lastFinal?.text || '';
           
-          if (data.translations?.es?.text) {
-            spanishFinal = data.translations.es.text;
-          } else if (data.activeTranslation?.es) {
-            spanishFinal = data.activeTranslation.es;
+          if (data.lastFinal?.text && data.lastFinal.text !== originalFinal) {
+            originalFinal = data.lastFinal.text;
+            sessionHistory.push({
+              time: new Date(),
+              original: originalFinal,
+              es: data.translations?.es?.text || data.activeTranslation?.es || originalFinal,
+              en: data.translations?.en?.text || data.activeTranslation?.en || originalFinal,
+              pt: data.translations?.pt?.text || data.activeTranslation?.pt || originalFinal
+            });
           }
 
-          if (data.translations?.en?.text) {
-            englishFinal = data.translations.en.text;
-          } else if (data.activeTranslation?.en) {
-            englishFinal = data.activeTranslation.en;
-          }
+          if (data.translations?.es?.text) spanishFinal = data.translations.es.text;
+          else if (data.activeTranslation?.es) spanishFinal = data.activeTranslation.es;
+
+          if (data.translations?.en?.text) englishFinal = data.translations.en.text;
+          else if (data.activeTranslation?.en) englishFinal = data.activeTranslation.en;
+
+          if (data.translations?.pt?.text) portugueseFinal = data.translations.pt.text;
+          else if (data.activeTranslation?.pt) portugueseFinal = data.activeTranslation.pt;
 
           renderCaptions();
         }
       });
     } catch (e) {
-      console.warn("RTDB offline en cliente:", e.message);
+      console.warn("RTDB offline:", e.message);
     }
 
-    // Fallback de desarrollo local por WebSocket directo
-    setTimeout(() => {
-      if (!rtdbConnected && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-        const ws = new WebSocket(`ws://localhost:8090/ws/broadcast/${sessionId}`);
-        ws.onmessage = (event) => {
-          try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'interim') {
-              originalPartial = msg.data.partialText || '';
-              renderCaptions();
-            } else if (msg.type === 'final') {
-              originalFinal = msg.data.segment.text || '';
-              originalPartial = '';
-              renderCaptions();
-            } else if (msg.type === 'translation') {
-              spanishFinal = msg.data.es || msg.data.text || '';
-              englishFinal = msg.data.en || msg.data.text || '';
-              renderCaptions();
-            }
-          } catch (e) {}
-        };
-      }
-    }, 1500);
-
-    // Funciones del Modal de QR
+    // Modal QR
     function openQrModal() {
       const baseUrl = window.location.hostname.includes('web.app') 
         ? 'https://voicy-3fca6.web.app' 
@@ -312,6 +331,38 @@
       if (!e || e.target.id === 'qrModal' || e.target.tagName === 'BUTTON') {
         document.getElementById('qrModal').style.display = 'none';
       }
+    }
+
+    // Exportador de Subtítulos a SRT
+    function downloadTranscript(format = 'srt') {
+      if (sessionHistory.length === 0) {
+        alert("Aún no hay frases transcritas en esta sesión para exportar.");
+        return;
+      }
+
+      let content = "";
+      const baseTime = sessionHistory[0].time.getTime();
+
+      sessionHistory.forEach((item, idx) => {
+        const startSec = Math.floor((item.time.getTime() - baseTime) / 1000);
+        const endSec = startSec + 4;
+        
+        function formatSrtTime(s) {
+          const hrs = String(Math.floor(s / 3600)).padStart(2, '0');
+          const mins = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+          const secs = String(s % 60).padStart(2, '0');
+          return `${hrs}:${mins}:${secs},000`;
+        }
+
+        const text = item[currentMode] || item.original;
+        content += `${idx + 1}\n${formatSrtTime(startSec)} --> ${formatSrtTime(endSec)}\n${text}\n\n`;
+      });
+
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `nerdearla-${sessionId}-${currentMode}.srt`;
+      a.click();
     }
   </script>
 </body>

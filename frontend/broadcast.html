@@ -157,15 +157,16 @@
         <span>Voicy</span>
       </a>
 
-      <!-- Selector de Idioma Triple: ORIGINAL | ESPAÑOL | ENGLISH -->
-      <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:12px; border:1px solid var(--border);">
+      <!-- Selector de Idioma Cuádruple: ORIGINAL | ESPAÑOL | ENGLISH | PORTUGUÊS -->
+      <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:12px; border:1px solid var(--border); overflow-x:auto;">
         <button id="btnLangOriginal" class="lang-pill active" onclick="setLanguage('original')">ORIGINAL</button>
         <button id="btnLangEs" class="lang-pill" onclick="setLanguage('es')">ESPAÑOL</button>
         <button id="btnLangEn" class="lang-pill" onclick="setLanguage('en')">ENGLISH</button>
+        <button id="btnLangPt" class="lang-pill" onclick="setLanguage('pt')">PORTUGUÊS</button>
       </div>
     </div>
 
-    <!-- Título y Selector de Stage (Stage 1 / Stage 2) -->
+    <!-- Título y Selector de Stage (Stage 1 / 2 / 3) -->
     <div style="margin-top:6px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
       <div>
         <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">
@@ -180,6 +181,7 @@
       <div style="display:flex; gap:8px;">
         <button id="tabStage1" class="stage-tab active" onclick="selectStage('stage-1')">Stage 1</button>
         <button id="tabStage2" class="stage-tab" onclick="selectStage('stage-2')">Stage 2</button>
+        <button id="tabStage3" class="stage-tab" onclick="selectStage('stage-3')">Stage 3</button>
       </div>
     </div>
 
@@ -255,6 +257,7 @@
     const sessionTitle = document.getElementById('sessionTitle');
     const tabStage1 = document.getElementById('tabStage1');
     const tabStage2 = document.getElementById('tabStage2');
+    const tabStage3 = document.getElementById('tabStage3');
     const captionFinal = document.getElementById('captionFinal');
     const captionLive = document.getElementById('captionLive');
     const btnRecordToggle = document.getElementById('btnRecordToggle');
@@ -266,14 +269,16 @@
     const btnLangOriginal = document.getElementById('btnLangOriginal');
     const btnLangEs = document.getElementById('btnLangEs');
     const btnLangEn = document.getElementById('btnLangEn');
+    const btnLangPt = document.getElementById('btnLangPt');
 
-    let currentMode = 'original'; // 'original' | 'es' | 'en'
+    let currentMode = 'original'; // 'original' | 'es' | 'en' | 'pt'
 
     // Buffers de texto
     let originalPartial = '';
     let originalFinal = '';
     let spanishFinal = '';
     let englishFinal = '';
+    let portugueseFinal = '';
 
     // Variables de audio y WebSocket
     let audioContext = null;
@@ -285,13 +290,10 @@
 
     function updateStageTabs() {
       sessionTitle.innerText = sessionId.replace('-', ' ').toUpperCase();
-      if (sessionId === 'stage-2') {
-        tabStage1.classList.remove('active');
-        tabStage2.classList.add('active');
-      } else {
-        tabStage1.classList.add('active');
-        tabStage2.classList.remove('active');
-      }
+      [tabStage1, tabStage2, tabStage3].forEach(t => t.classList.remove('active'));
+      if (sessionId === 'stage-2') tabStage2.classList.add('active');
+      else if (sessionId === 'stage-3') tabStage3.classList.add('active');
+      else tabStage1.classList.add('active');
     }
     updateStageTabs();
 
@@ -308,6 +310,7 @@
       originalFinal = '';
       spanishFinal = '';
       englishFinal = '';
+      portugueseFinal = '';
       renderCaptions();
     }
 
@@ -316,6 +319,7 @@
       btnLangOriginal.classList.toggle('active', mode === 'original');
       btnLangEs.classList.toggle('active', mode === 'es');
       btnLangEn.classList.toggle('active', mode === 'en');
+      btnLangPt.classList.toggle('active', mode === 'pt');
       renderCaptions();
     }
 
@@ -332,6 +336,9 @@
           } else if (currentMode === 'en') {
             captionFinal.innerText = englishFinal || originalFinal;
             captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (englishFinal ? '' : (isBroadcasting ? 'Translating to English...' : 'Presioná RECORD para comenzar a hablar...'));
+          } else if (currentMode === 'pt') {
+            captionFinal.innerText = portugueseFinal || originalFinal;
+            captionLive.innerText = originalPartial ? `« ${originalPartial} »` : (portugueseFinal ? '' : (isBroadcasting ? 'Traduzindo para português...' : 'Presioná RECORD para comenzar a hablar...'));
           }
           renderTimer = null;
         }, 40);
@@ -406,6 +413,7 @@
           selAudioSource.disabled = true;
           tabStage1.disabled = true;
           tabStage2.disabled = true;
+          tabStage3.disabled = true;
           statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Gemini Activo)`;
           renderCaptions();
         };
@@ -421,9 +429,9 @@
               originalPartial = '';
               renderCaptions();
             } else if (msg.type === 'translation') {
-              // Guardar ambas traducciones
               spanishFinal = msg.data.es || msg.data.text || '';
               englishFinal = msg.data.en || msg.data.text || '';
+              portugueseFinal = msg.data.pt || msg.data.text || '';
               renderCaptions();
             } else if (msg.type === 'gemini_status') {
               if (msg.status === 'connected') {
@@ -476,6 +484,7 @@
       selAudioSource.disabled = false;
       tabStage1.disabled = false;
       tabStage2.disabled = false;
+      tabStage3.disabled = false;
       statusIndicator.innerText = 'Transmisión detenida';
       renderCaptions();
     }
