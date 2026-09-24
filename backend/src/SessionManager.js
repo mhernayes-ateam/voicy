@@ -109,20 +109,28 @@ export class SessionManager {
 
   async translateAndPublish(sessionId, segment) {
     try {
+      const tStart = Date.now();
       const result = await this.translator.translateAuto(segment.text);
+      const tEnd = Date.now();
+
+      const translationLatencyMs = tEnd - tStart;
+      const totalTranslatedLatencyMs = tEnd - (segment.startMs || tStart);
+
       const payload = {
         segmentId: segment.segmentId,
         sequence: segment.sequence,
         sourceLang: result.sourceLang,
         targetLang: result.targetLang,
         text: result.text,
-        updatedAt: Date.now()
+        translationLatencyMs: translationLatencyMs,
+        totalTranslatedLatencyMs: totalTranslatedLatencyMs,
+        updatedAt: tEnd
       };
 
       // Publicar en RTDB /translations/{targetLang} y /activeTranslation
       await this.publisher.publishTranslation(sessionId, payload);
 
-      // Si el broadcaster está conectado, enviarle también el evento de traducción
+      // Si el broadcaster está conectado, enviarle también el evento de traducción con métricas
       const session = this.sessions.get(sessionId);
       if (session && session.broadcasterWs && session.broadcasterWs.readyState === 1) {
         session.broadcasterWs.send(JSON.stringify({

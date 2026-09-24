@@ -104,16 +104,20 @@ Gemini Live define nativamente los dos eventos sin requerir heurísticas arbitra
 - **Watchdog Anti-Freeze:**
   - Si hay audio activo pero no se recibe respuesta de Gemini en > 4 segundos, se clasifica como estado degradado y se gatilla una reconexión/rotación proactiva.
 
-### 4.5. Traducción Simultánea Bidireccional (`gemini-2.5-flash`)
+### 4.5. Traducción Simultánea Bidireccional (`gemini-3.5-flash-lite`)
+- **Modelo:** `gemini-3.5-flash-lite` (diseñado específicamente para alto throughput, bajo costo y baja latencia).
 - **Detección y traducción automática:**
   - Si el orador habla en inglés ➔ Traduce al español latinoamericano.
   - Si el orador habla en español ➔ Traduce al inglés.
 - Preserva estrictamente nombres de librerías, marcas y términos técnicos verbatim.
-- Latencia de traducción: ~300-500ms.
+- **Target translation latency:** < 750 ms (medición empírica en tiempo real).
 
-### 4.6. Métricas de Latencia de Ingeniería
+### 4.6. Desglose de Métricas de Latencia de Ingeniería
+En el estudio de transmisión se monitorizan 4 métricas desacopladas:
 - **`partialLatencyMs` (Target: < 1.5s):** Tiempo desde la voz hasta la hipótesis visual en pantalla. Define la agilidad percibida.
-- **`finalLatencyMs` (Target: < 3.0s):** Tiempo hasta la consolidación autoritativa de la frase y su traducción.
+- **`finalLatencyMs` (Target: < 3.0s):** Tiempo hasta la consolidación autoritativa de la frase completa por parte de Gemini Live.
+- **`translationLatencyMs` (Target: < 750ms):** Tiempo de respuesta del modelo Flash-Lite al traducir la frase consolidada.
+- **`totalTranslatedLatencyMs` (Target: < 3.5s):** Tiempo total de ciclo completo desde la voz original hasta la entrega del subtítulo traducido.
 
 ---
 
