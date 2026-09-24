@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /sessions/{sessionId} {
+      allow read: if true;
+      allow write: if false; // Solo backend / Admin SDK
+
+      match /segments/{segmentId} {
+        allow read: if true;
+        allow write: if false; // Solo backend / Admin SDK
+      }
+    }
+  }
+}

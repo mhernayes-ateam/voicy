@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Voicy — Subtítulos en Vivo</title>
+  <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Firebase Compat SDKs para Realtime Database -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+</head>
+<body style="background: #090B10; overflow-x: hidden;">
+
+  <div class="audience-wrapper">
+    <!-- Topbar Mobile -->
+    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 20px;">
+      <a href="/" class="brand-logo" style="font-size:18px;">
+        <div class="brand-logo-icon" style="width:26px; height:26px; font-size:13px;">🎙️</div>
+        <span>Voicy</span>
+      </a>
+
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="badge-live"><span class="dot"></span> LIVE</span>
+        <span id="badgeLanguage" class="status-pill active" style="font-size:10px;">ORIGINAL</span>
+      </div>
+    </div>
+
+    <!-- Título de la Charla / Sesión -->
+    <div style="margin-top:12px; margin-bottom: 20px;">
+      <div id="sessionStage" style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">
+        Conferencia en Vivo
+      </div>
+      <h2 id="sessionTitle" style="font-family:var(--font-h); font-size:20px; font-weight:700; margin-top:2px;">
+        Sala: test
+      </h2>
+    </div>
+
+    <!-- Pantalla Principal de Subtítulos -->
+    <div class="audience-captions" id="captionsContainer">
+      <div id="captionFinal" class="final-phrase"></div>
+      <div>
+        <span id="captionLive" class="live-phrase">Esperando inicio de la conferencia...</span>
+        <span class="cursor-blink"></span>
+      </div>
+    </div>
+
+    <!-- Footer Mobile -->
+    <div style="margin-top:auto; padding-top:20px; text-align:center; font-size:12px; color:var(--text-dim); border-top:1px solid var(--border);">
+      Powered by <strong>Gemini 3.5 Transcribe Live</strong> & <strong>Firebase</strong>
+    </div>
+  </div>
+
+  <script>
+    // Extraer sessionId de la URL (/session/{sessionId})
+    const pathParts = window.location.pathname.split('/');
+    const sessionId = pathParts[2] || 'test';
+    document.getElementById('sessionTitle').innerText = `Sala: ${sessionId}`;
+
+    const captionFinal = document.getElementById('captionFinal');
+    const captionLive = document.getElementById('captionLive');
+
+    // Buffer de renderizado suave (Throttling 100ms)
+    let pendingPartial = '';
+    let pendingFinal = '';
+    let renderTimer = null;
+
+    function scheduleRender(partialText, finalText) {
+      pendingPartial = partialText != null ? partialText : pendingPartial;
+      if (finalText != null) pendingFinal = finalText;
+
+      if (!renderTimer) {
+        renderTimer = setTimeout(() => {
+          if (pendingFinal) {
+            captionFinal.innerText = pendingFinal;
+          }
+          if (pendingPartial) {
+            captionLive.innerText = pendingPartial;
+          } else if (!pendingFinal) {
+            captionLive.innerText = 'Transcribiendo audio en vivo...';
+          }
+          renderTimer = null;
+        }, 100);
+      }
+    }
+
+    // Configuración de Firebase para Voicy (voicy-live)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDummyKeyForPublicRead",
+      databaseURL: "https://voicy-live-default-rtdb.firebaseio.com",
+      projectId: "voicy-live"
+    };
+
+    let rtdbConnected = false;
+
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      const db = firebase.database();
+      const sessionRef = db.ref(`liveSessions/${sessionId}`);
+
+      sessionRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          rtdbConnected = true;
+          const partial = data.current?.partialText || '';
+          const final = data.lastFinal?.text || '';
+          scheduleRender(partial, final);
+        }
+      });
+    } catch (e) {
+      console.warn("RTDB no configurado aún en cliente. Usando fallback de desarrollo local.");
+    }
+
+    // Fallback de desarrollo local si no hay RTDB en la nube configurado aún
+    setTimeout(() => {
+      if (!rtdbConnected && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        console.log("Activando listener local WebSocket para pruebas inmediatas...");
+        const ws = new WebSocket(`ws://localhost:8080/ws/broadcast/${sessionId}`);
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'interim') {
+              scheduleRender(msg.data.partialText, null);
+            } else if (msg.type === 'final') {
+              scheduleRender('', msg.data.segment.text);
+            }
+          } catch (e) {}
+        };
+      }
+    }, 1500);
+  </script>
+</body>
+</html>

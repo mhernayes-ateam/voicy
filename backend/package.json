@@ -1,0 +1,19 @@
+{
+  "name": "voicy-backend",
+  "version": "1.0.0",
+  "description": "Voicy Real-time Caption Stream Service for Gemini Live & Firebase RTDB",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "firebase-admin": "^13.1.0",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

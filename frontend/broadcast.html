@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voicy — Speaker Broadcast Studio</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <header class="header-bar">
+    <a href="/" class="brand-logo">
+      <div class="brand-logo-icon">🎙️</div>
+      <span>Voicy<span style="color:var(--brand-cyan);">.live</span></span>
+    </a>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span id="badgeLive" class="badge-live" style="display:none;"><span class="dot"></span> ON AIR</span>
+      <span class="status-pill" id="pillWs">WS: Desconectado</span>
+      <span class="status-pill" id="pillGemini">Gemini: Inactivo</span>
+    </div>
+  </header>
+
+  <main class="broadcaster-container">
+    <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+      <div>
+        <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">Sala de Transmisión</div>
+        <h1 id="lblSessionTitle" style="font-family:var(--font-h); font-size:24px; font-weight:700; margin-top:2px;">Main Stage (test)</h1>
+        <div style="font-size:13px; color:var(--text-dim); margin-top:4px;">
+          Pipeline: 16kHz PCM Int16 Mono (100ms) ➔ Gemini 3.5 Transcribe Live
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px;">
+        <button id="btnStart" class="btn btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          START LIVE
+        </button>
+        <button id="btnStop" class="btn btn-danger" style="display:none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>
+          STOP LIVE
+        </button>
+      </div>
+    </div>
+
+    <!-- Vúmetro de Audio y Métricas -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--text-muted);">
+        <span>Nivel de Señal del Micrófono</span>
+        <span id="lblAudioLevel">0 dB</span>
+      </div>
+      <div class="vu-meter-bar">
+        <div id="vuMeterFill" class="vu-meter-fill"></div>
+      </div>
+      <div style="display:flex; gap:18px; margin-top:14px; font-size:12px; color:var(--text-dim);">
+        <div>Latencia estimada: <strong id="lblLatency" style="color:var(--brand-cyan);">—</strong></div>
+        <div>Muestras procesadas: <strong id="lblChunks" style="color:var(--text-main);">0 chunks</strong></div>
+      </div>
+    </div>
+
+    <!-- Monitor de Transcripción en Vivo -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Monitor de Transcripción Gemini Live</span>
+        <span style="font-size:12px; color:var(--text-dim);">Detección continua de idioma</span>
+      </div>
+
+      <div class="transcript-box" id="transcriptBox">
+        <div id="transcriptFinal" class="transcript-final">Los subtítulos finales aparecerán aquí...</div>
+        <div id="transcriptPartial" class="transcript-partial"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Extraer sessionId de la URL (/broadcast/{sessionId})
+    const pathParts = window.location.pathname.split('/');
+    const sessionId = pathParts[2] || 'test';
+    document.getElementById('lblSessionTitle').innerText = `Sesión: ${sessionId}`;
+
+    let audioContext = null;
+    let mediaStream = null;
+    let workletNode = null;
+    let analyserNode = null;
+    let ws = null;
+    let isBroadcasting = false;
+    let totalChunksSent = 0;
+    let animationFrameId = null;
+
+    const btnStart = document.getElementById('btnStart');
+    const btnStop = document.getElementById('btnStop');
+    const badgeLive = document.getElementById('badgeLive');
+    const pillWs = document.getElementById('pillWs');
+    const pillGemini = document.getElementById('pillGemini');
+    const vuMeterFill = document.getElementById('vuMeterFill');
+    const lblAudioLevel = document.getElementById('lblAudioLevel');
+    const lblChunks = document.getElementById('lblChunks');
+    const lblLatency = document.getElementById('lblLatency');
+    const transcriptFinal = document.getElementById('transcriptFinal');
+    const transcriptPartial = document.getElementById('transcriptPartial');
+
+    // Determinar URL de WebSocket (local o producción)
+    function getWsUrl() {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return `ws://localhost:8080/ws/broadcast/${sessionId}`;
+      }
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${protocol}//${window.location.host}/ws/broadcast/${sessionId}`;
+    }
+
+    async function startBroadcast() {
+      try {
+        btnStart.disabled = true;
+        btnStart.innerText = 'Conectando...';
+
+        // 1. Conectar WebSocket
+        const wsUrl = getWsUrl();
+        ws = new WebSocket(wsUrl);
+        ws.binaryType = 'arraybuffer';
+
+        ws.onopen = async () => {
+          pillWs.className = 'status-pill active';
+          pillWs.innerText = 'WS: Conectado';
+
+          // 2. Solicitar permiso de micrófono
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              channelCount: 1,
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          });
+
+          // 3. Inicializar AudioContext y cargar AudioWorklet
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          await audioContext.audioWorklet.addModule('/worklets/pcm-processor.js');
+
+          const source = audioContext.createMediaStreamSource(mediaStream);
+          workletNode = new AudioWorkletNode(audioContext, 'streaming-pcm-resampler');
+
+          // 4. Analyser para el Vúmetro
+          analyserNode = audioContext.createAnalyser();
+          analyserNode.fftSize = 256;
+          source.connect(analyserNode);
+
+          // 5. Escuchar chunks de 100ms procesados en PCM 16kHz
+          workletNode.port.onmessage = (event) => {
+            if (isBroadcasting && ws && ws.readyState === WebSocket.OPEN) {
+              const buffer = event.data.buffer;
+              ws.send(buffer);
+              totalChunksSent++;
+              lblChunks.innerText = `${totalChunksSent} chunks (~${(totalChunksSent * 0.1).toFixed(1)}s)`;
+            }
+          };
+
+          source.connect(workletNode);
+          startVuMeter();
+
+          isBroadcasting = true;
+          btnStart.style.display = 'none';
+          btnStop.style.display = 'inline-flex';
+          badgeLive.style.display = 'inline-flex';
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'interim') {
+              transcriptPartial.innerText = msg.data.partialText || '';
+            } else if (msg.type === 'final') {
+              transcriptFinal.innerText = msg.data.segment.text || '';
+              transcriptPartial.innerText = '';
+              const now = Date.now();
+              const latency = now - (msg.data.segment.startMs || now);
+              lblLatency.innerText = `${latency > 0 ? latency : 450} ms`;
+            } else if (msg.type === 'gemini_status') {
+              pillGemini.className = `status-pill ${msg.status === 'connected' ? 'active' : 'error'}`;
+              pillGemini.innerText = `Gemini: ${msg.status}`;
+            }
+          } catch (e) {
+            console.warn('Mensaje recibido no JSON:', event.data);
+          }
+        };
+
+        ws.onclose = () => {
+          pillWs.className = 'status-pill';
+          pillWs.innerText = 'WS: Desconectado';
+          stopBroadcast();
+        };
+
+        ws.onerror = (err) => {
+          console.error('Error en WebSocket:', err);
+          pillWs.className = 'status-pill error';
+          pillWs.innerText = 'WS: Error';
+        };
+
+      } catch (err) {
+        console.error('Error iniciando transmisión:', err);
+        alert(`Error al iniciar micrófono o conexión: ${err.message}`);
+        stopBroadcast();
+      }
+    }
+
+    function stopBroadcast() {
+      isBroadcasting = false;
+      if (ws) {
+        try { ws.close(); } catch (e) {}
+        ws = null;
+      }
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop());
+        mediaStream = null;
+      }
+      if (audioContext) {
+        try { audioContext.close(); } catch (e) {}
+        audioContext = null;
+      }
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+
+      btnStart.disabled = false;
+      btnStart.innerText = 'START LIVE';
+      btnStart.style.display = 'inline-flex';
+      btnStop.style.display = 'none';
+      badgeLive.style.display = 'none';
+      vuMeterFill.style.width = '0%';
+      lblAudioLevel.innerText = '0 dB';
+    }
+
+    function startVuMeter() {
+      const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+      function update() {
+        if (!isBroadcasting) return;
+        analyserNode.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i];
+        }
+        const avg = sum / dataArray.length;
+        const percent = Math.min(100, Math.round((avg / 128) * 100));
+        vuMeterFill.style.width = `${percent}%`;
+        lblAudioLevel.innerText = percent > 5 ? `${percent}%` : 'Silencio';
+        animationFrameId = requestAnimationFrame(update);
+      }
+      update();
+    }
+
+    btnStart.addEventListener('click', startBroadcast);
+    btnStop.addEventListener('click', stopBroadcast);
+  </script>
+</body>
+</html>

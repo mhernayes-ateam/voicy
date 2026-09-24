@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voicy — Subtítulos en Tiempo Real para Conferencias</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <header class="header-bar">
+    <a href="/" class="brand-logo">
+      <div class="brand-logo-icon">🎙️</div>
+      <span>Voicy<span style="color:var(--brand-cyan);">.live</span></span>
+    </a>
+    <span class="badge-live"><span class="dot"></span> VIBEATHON 2026</span>
+  </header>
+
+  <main style="max-width: 800px; margin: 60px auto 40px; padding: 0 20px; text-align: center;">
+    <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 16px; border-radius:999px; background:rgba(123,79,255,0.12); border:1px solid rgba(123,79,255,0.3); font-size:12px; font-weight:700; color:#A78BFA; margin-bottom:20px;">
+      ⚡ Gemini 3.5 Transcribe Live + Firebase RTDB
+    </div>
+
+    <h1 style="font-family:var(--font-h); font-size:clamp(32px, 6vw, 54px); font-weight:800; line-height:1.15; letter-spacing:-1px;">
+      Subtítulos en tiempo real para conferencias globales
+    </h1>
+
+    <p style="font-size:17px; color:var(--text-muted); max-width:620px; margin:20px auto 36px; line-height:1.6;">
+      Captura continua de audio por WebSocket, transcripción de baja latencia con Gemini Live y distribución masiva en vivo para miles de celulares.
+    </p>
+
+    <!-- Botones de Acción Inmediata -->
+    <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap; margin-bottom: 50px;">
+      <a href="/broadcast/test" class="btn btn-primary" style="padding:14px 28px; font-size:16px;">
+        🎙️ Abrir Panel del Speaker (/broadcast/test)
+      </a>
+      <a href="/session/test" class="btn btn-outline" style="padding:14px 28px; font-size:16px;">
+        📱 Abrir Vista de Audiencia (/session/test)
+      </a>
+    </div>
+
+    <!-- Cards de Demostración -->
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:20px; text-align:left;">
+      <div class="card">
+        <div style="font-size:24px; margin-bottom:8px;">⚡</div>
+        <h3 style="font-family:var(--font-h); font-size:17px; font-weight:700; margin-bottom:6px;">AudioWorklet 16kHz</h3>
+        <p style="font-size:13px; color:var(--text-muted); line-height:1.5;">
+          Resampling lineal continuo stateful de 100ms sin pérdida de frames ni jitter acústico.
+        </p>
+      </div>
+
+      <div class="card">
+        <div style="font-size:24px; margin-bottom:8px;">🧠</div>
+        <h3 style="font-family:var(--font-h); font-size:17px; font-weight:700; margin-bottom:6px;">Gemini 3.5 Live</h3>
+        <p style="font-size:13px; color:var(--text-muted); line-height:1.5;">
+          Modo SMART con vocabulario técnico nativo (Kubernetes, TypeScript, Nerdearla).
+        </p>
+      </div>
+
+      <div class="card">
+        <div style="font-size:24px; margin-bottom:8px;">🚀</div>
+        <h3 style="font-family:var(--font-h); font-size:17px; font-weight:700; margin-bottom:6px;">RTDB Sharding</h3>
+        <p style="font-size:13px; color:var(--text-muted); line-height:1.5;">
+          Distribución de deltas a miles de teléfonos móviles concurrentes con renderizado suave.
+        </p>
+      </div>
+    </div>
+  </main>
+
+</body>
+</html>
