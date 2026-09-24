@@ -159,7 +159,7 @@
     setTimeout(() => {
       if (!rtdbConnected && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
         console.log("Activando listener local WebSocket para pruebas inmediatas...");
-        const ws = new WebSocket(`ws://localhost:8080/ws/broadcast/${sessionId}`);
+        const ws = new WebSocket(`ws://localhost:8090/ws/broadcast/${sessionId}`);
         ws.onmessage = (event) => {
           try {
             const msg = JSON.parse(event.data);

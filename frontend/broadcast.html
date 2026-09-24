@@ -130,7 +130,7 @@
 
     function getWsUrl() {
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return `ws://localhost:8080/ws/broadcast/${sessionId}`;
+        return `ws://localhost:8090/ws/broadcast/${sessionId}`;
       }
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       return `${protocol}//${window.location.host}/ws/broadcast/${sessionId}`;
