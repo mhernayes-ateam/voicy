@@ -19,11 +19,12 @@ export class SessionManager {
     this.sessions = new Map(); // sessionId -> SessionContext
   }
 
-  async getOrCreateSession(sessionId, broadcasterWs) {
+  async getOrCreateSession(sessionId, broadcasterWs, options = {}) {
     let session = this.sessions.get(sessionId);
+    const speakerLanguage = options.speakerLanguage || 'es';
 
     if (!session) {
-      console.log(`[SessionManager] Creando nueva sesión: ${sessionId}`);
+      console.log(`[SessionManager] Creando nueva sesión: ${sessionId} (idioma orador: ${speakerLanguage})`);
 
       // Fix 4: Translator independiente por sesión
       const sessionTranslator = new Translator(this.apiKey);
@@ -51,6 +52,7 @@ export class SessionManager {
       const geminiClient = new GeminiConnectionManager({
         apiKey: this.apiKey,
         sessionId: sessionId,
+        speakerLanguage: speakerLanguage,
         onInterim: (text) => segmentManager.handleInterim(text),
         onFinal: (text) => segmentManager.handleFinal(text),
         onError: (err) => {
@@ -196,6 +198,17 @@ export class SessionManager {
       }
     } catch (err) {
       console.error(`[SessionManager] Error traduciendo segmento para ${sessionId}:`, err);
+    }
+  }
+
+  setSpeakerLanguage(sessionId, speakerLanguage) {
+    const session = this.sessions.get(sessionId);
+    if (session && session.geminiClient) {
+      if (session.geminiClient.speakerLanguage !== speakerLanguage) {
+        console.log(`[SessionManager:${sessionId}] Cambiando idioma de orador a: ${speakerLanguage}`);
+        session.geminiClient.speakerLanguage = speakerLanguage;
+        session.geminiClient.reconnect();
+      }
     }
   }
 

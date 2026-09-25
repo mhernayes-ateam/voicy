@@ -134,17 +134,18 @@ server.on('upgrade', (request, socket, head) => {
   }
 
   const sessionId = match[1];
+  const speakerLang = url.searchParams.get('speakerLang') || url.searchParams.get('lang') || 'es';
 
   wss.handleUpgrade(request, socket, head, (ws) => {
-    wss.emit('connection', ws, request, sessionId);
+    wss.emit('connection', ws, request, sessionId, speakerLang);
   });
 });
 
-wss.on('connection', async (ws, request, sessionId) => {
-  console.log(`[WebSocket] Nueva conexión de broadcaster para sesión: ${sessionId}`);
+wss.on('connection', async (ws, request, sessionId, speakerLang = 'es') => {
+  console.log(`[WebSocket] Nueva conexión de broadcaster para sesión: ${sessionId} (idioma orador: ${speakerLang})`);
 
   try {
-    const session = await sessionManager.getOrCreateSession(sessionId, ws);
+    const session = await sessionManager.getOrCreateSession(sessionId, ws, { speakerLanguage: speakerLang });
 
     ws.send(JSON.stringify({
       type: 'connection_ack',
@@ -160,6 +161,11 @@ wss.on('connection', async (ws, request, sessionId) => {
           const msg = JSON.parse(data.toString());
           if (msg.action === 'ping') {
             ws.send(JSON.stringify({ type: 'pong', clientTime: msg.time, serverTime: Date.now() }));
+          } else if (msg.action === 'configure') {
+            if (msg.speakerLang) {
+              console.log(`[WebSocket] Broadcaster configuró idioma de orador: ${msg.speakerLang}`);
+              sessionManager.setSpeakerLanguage(sessionId, msg.speakerLang);
+            }
           } else if (msg.action === 'stop') {
             console.log(`[WebSocket] Broadcaster solicitó detener sesión ${sessionId}`);
             sessionManager.terminateSession(sessionId);

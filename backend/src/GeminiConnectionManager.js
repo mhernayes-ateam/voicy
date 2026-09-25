@@ -15,6 +15,7 @@ export class GeminiConnectionManager {
   constructor(options = {}) {
     this.apiKey = options.apiKey || process.env.GEMINI_API_KEY;
     this.sessionId = options.sessionId || 'test';
+    this.speakerLanguage = options.speakerLanguage || 'es'; // 'es' (default) o 'en'
     this.customVocabulary = options.customVocabulary || [
       'Nerdearla', 'Gemini', 'Kubernetes', 'TypeScript', 'React',
       'A-TEAM', 'Cloud Run', 'Firestore', 'Antigravity', 'Voicy'
@@ -101,6 +102,11 @@ export class GeminiConnectionManager {
   }
 
   sendSetup() {
+    const isEnglish = (this.speakerLanguage === 'en' || this.speakerLanguage === 'en-US');
+    const languageCodes = isEnglish ? ['en-US', 'en'] : ['es-419', 'es', 'es-ES'];
+
+    console.log(`[GeminiLive:${this.sessionId}] Configurando Gemini Live con idioma de orador: ${this.speakerLanguage} (languageCodes: ${JSON.stringify(languageCodes)})`);
+
     const setupMsg = {
       setup: {
         model: 'models/gemini-3.5-transcribe-live',
@@ -108,7 +114,7 @@ export class GeminiConnectionManager {
           responseModalities: ['TEXT']
         },
         inputAudioTranscription: {
-          languageCodes: [], // Auto-detección multi-idioma continua según plan.md 4.2
+          languageCodes: languageCodes,
           mode: 'SMART',     // Subtítulos limpios sin muletillas
           customVocabulary: this.customVocabulary
         }

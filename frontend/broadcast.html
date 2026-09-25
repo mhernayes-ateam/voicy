@@ -176,11 +176,18 @@
         </h2>
       </div>
 
-      <!-- Selector de Escenario (Requisito Multi-Stage Nerdearla) -->
-      <div style="display:flex; gap:8px;">
-        <button id="tabStage1" class="stage-tab active" onclick="selectStage('stage-1')">Stage 1</button>
-        <button id="tabStage2" class="stage-tab" onclick="selectStage('stage-2')">Stage 2</button>
-        <button id="tabStage3" class="stage-tab" onclick="selectStage('stage-3')">Stage 3</button>
+      <!-- Selector de Idioma del Orador y Escenario (Multi-Stage Nerdearla) -->
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.04); padding:3px 6px; border-radius:10px; border:1px solid var(--border);" title="Idioma hablado por el orador en vivo">
+          <span style="font-size:11px; color:var(--text-muted); font-weight:600; padding-left:4px;">Voz Orador:</span>
+          <button id="btnSpeakerEs" class="stage-tab active" style="padding:4px 8px; font-size:11px;" onclick="setSpeakerLanguage('es')">🇪🇸 Español</button>
+          <button id="btnSpeakerEn" class="stage-tab" style="padding:4px 8px; font-size:11px;" onclick="setSpeakerLanguage('en')">🇺🇸 English</button>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button id="tabStage1" class="stage-tab active" onclick="selectStage('stage-1')">Stage 1</button>
+          <button id="tabStage2" class="stage-tab" onclick="selectStage('stage-2')">Stage 2</button>
+          <button id="tabStage3" class="stage-tab" onclick="selectStage('stage-3')">Stage 3</button>
+        </div>
       </div>
     </div>
 
@@ -313,6 +320,7 @@
     const btnLangPt = document.getElementById('btnLangPt');
 
     let currentMode = 'original'; // 'original' | 'es' | 'en' | 'pt'
+    let speakerLang = urlParams.get('speakerLang') || 'es'; // 'es' (default) | 'en'
 
     // Buffers de texto y traducciones con soporte de histórico roll-up
     let originalPartial = '';
@@ -378,6 +386,18 @@
       btnLangEn.classList.toggle('active', mode === 'en');
       btnLangPt.classList.toggle('active', mode === 'pt');
       renderCaptions();
+    }
+
+    function setSpeakerLanguage(lang) {
+      speakerLang = lang;
+      const btnEs = document.getElementById('btnSpeakerEs');
+      const btnEn = document.getElementById('btnSpeakerEn');
+      if (btnEs) btnEs.classList.toggle('active', lang === 'es');
+      if (btnEn) btnEn.classList.toggle('active', lang === 'en');
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'configure', speakerLang: lang }));
+      }
     }
 
     class GoldenRollUpStreamer {
@@ -473,20 +493,21 @@
     let connectTimeout = null;
 
     function getWsUrl() {
+      const q = `?speakerLang=${encodeURIComponent(speakerLang)}`;
+
       // 1. Si se especificó ?backend=... en la URL
       const customBackend = urlParams.get('backend');
       if (customBackend) {
-        return customBackend.startsWith('ws') ? customBackend : `ws://${customBackend}/ws/broadcast/${sessionId}`;
+        return customBackend.startsWith('ws') ? `${customBackend}${q}` : `ws://${customBackend}/ws/broadcast/${sessionId}${q}`;
       }
 
       // 2. Si estamos en localhost o 127.0.0.1
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return `ws://localhost:8090/ws/broadcast/${sessionId}`;
+        return `ws://localhost:8090/ws/broadcast/${sessionId}${q}`;
       }
 
       // 3. Si se accede desde Firebase Hosting o IP de red:
-      // Conectar a la máquina del orador donde corre el backend local de captura
-      return `ws://localhost:8090/ws/broadcast/${sessionId}`;
+      return `ws://localhost:8090/ws/broadcast/${sessionId}${q}`;
     }
 
     async function toggleBroadcast() {
@@ -637,15 +658,17 @@
                 renderCaptions();
               }
               
-              // Guardar en el historial del bloque actual
-              sessionHistory.push({
-                time: new Date(),
-                seq: msg.data.segment?.sequence || sessionHistory.length,
-                original: txt,
-                es: spanishFinal || txt,
-                en: englishFinal || txt,
-                pt: portugueseFinal || txt
-              });
+              // Guardar en el historial del bloque actual si no está vacío
+              if (txt && txt.trim()) {
+                sessionHistory.push({
+                  time: new Date(),
+                  seq: msg.data.segment?.sequence || sessionHistory.length,
+                  original: txt.trim(),
+                  es: spanishFinal || txt.trim(),
+                  en: englishFinal || txt.trim(),
+                  pt: portugueseFinal || txt.trim()
+                });
+              }
             } else if (msg.type === 'translation') {
               const trEs = msg.data.es || '';
               const trEn = msg.data.en || '';
@@ -791,16 +814,21 @@
     }
 
     function downloadBroadcastSrt() {
-      if (sessionHistory.length === 0) {
-        alert('No hay frases transcritas en este bloque para exportar.');
+      const validItems = sessionHistory.filter(item => {
+        const t = (item[currentMode] || item.original || '').trim();
+        return t.length > 0;
+      });
+
+      if (validItems.length === 0) {
+        alert('No hay subtítulos grabados en este bloque para exportar. Asegurate de que el orador haya hablado durante la grabación.');
         return;
       }
       let content = "";
-      const baseTime = sessionHistory[0].time.getTime();
+      const baseTime = validItems[0].time.getTime();
 
-      sessionHistory.forEach((item, idx) => {
+      validItems.forEach((item, idx) => {
         const startSec = Math.floor((item.time.getTime() - baseTime) / 1000);
-        const endSec = startSec + 4;
+        const endSec = startSec + 3;
 
         function formatSrtTime(s) {
           const hrs = String(Math.floor(s / 3600)).padStart(2, '0');
@@ -809,7 +837,7 @@
           return `${hrs}:${mins}:${secs},000`;
         }
 
-        const text = item[currentMode] || item.original;
+        const text = (item[currentMode] || item.original || '').trim();
         content += `${idx + 1}\n${formatSrtTime(startSec)} --> ${formatSrtTime(endSec)}\n${text}\n\n`;
       });
 
