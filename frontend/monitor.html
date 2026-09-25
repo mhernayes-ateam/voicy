@@ -129,19 +129,35 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // Fix: listeners separados por nodo para evitar cascadas de onValue.
+    // El listener de nodo raíz disparaba hasta 4 veces por segmento (partial + final + 3 traducciones).
     function monitorStage(stageId, badgeId, textId) {
-      db.ref(`liveSessions/${stageId}`).on('value', (snap) => {
+      const badge = document.getElementById(badgeId);
+      const text = document.getElementById(textId);
+
+      // Listener de texto parcial en vivo
+      db.ref(`liveSessions/${stageId}/current`).on('value', (snap) => {
         const val = snap.val();
-        const badge = document.getElementById(badgeId);
-        const text = document.getElementById(textId);
-        if (val && val.status === 'live') {
+        if (val && val.partialText) {
           badge.className = 'status-pill active';
           badge.innerText = '• EN VIVO';
-          const txt = val.lastFinal?.text || val.current?.partialText || 'Transmitiendo...';
-          text.innerText = txt;
-        } else {
-          badge.className = 'status-pill';
-          badge.innerText = 'Inactivo';
+          // Solo actualizar si no hay texto final más reciente visible
+          if (!text.dataset.hasFinal || text.dataset.hasFinal === 'false') {
+            text.innerText = val.partialText;
+          }
+        }
+      });
+
+      // Listener de segmento final (texto confirmado)
+      db.ref(`liveSessions/${stageId}/lastFinal`).on('value', (snap) => {
+        const val = snap.val();
+        if (val && val.text) {
+          badge.className = 'status-pill active';
+          badge.innerText = '• EN VIVO';
+          text.innerText = val.text;
+          text.dataset.hasFinal = 'true';
+          // Limpiar el flag tras 8s (para que partial vuelva a mostrarse si hay otro segmento)
+          setTimeout(() => { text.dataset.hasFinal = 'false'; }, 8000);
         }
       });
     }

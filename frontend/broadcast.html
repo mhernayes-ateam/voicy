@@ -554,16 +554,22 @@
               renderCaptions();
             } else if (msg.type === 'final') {
               const txt = msg.data.segment.text || '';
-              streamerLive.setCommittedLine(txt);
               originalFinal = txt;
               originalPartial = '';
+              // Fix 2: solo actualizar committed line si el modo activo es 'original'
+              if (currentMode === 'original') streamerLive.setCommittedLine(txt);
               renderCaptions();
             } else if (msg.type === 'translation') {
-              const trTxt = msg.data.es || msg.data.text || '';
-              streamerLive.setCommittedLine(trTxt);
-              spanishFinal = trTxt;
-              englishFinal = msg.data.en || msg.data.text || '';
-              portugueseFinal = msg.data.pt || msg.data.text || '';
+              const trEs = msg.data.es || msg.data.text || '';
+              const trEn = msg.data.en || msg.data.text || '';
+              const trPt = msg.data.pt || msg.data.text || '';
+              spanishFinal = trEs;
+              englishFinal = trEn;
+              portugueseFinal = trPt;
+              // Fix 2: actualizar committed line solo para el idioma activo
+              if (currentMode === 'es') streamerLive.setCommittedLine(trEs);
+              else if (currentMode === 'en') streamerLive.setCommittedLine(trEn);
+              else if (currentMode === 'pt') streamerLive.setCommittedLine(trPt);
               renderCaptions();
             } else if (msg.type === 'gemini_status') {
               if (msg.status === 'connected') {

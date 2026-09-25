@@ -8,6 +8,18 @@
     ],
     "cleanUrls": true,
     "trailingSlash": false,
+    "redirects": [
+      {
+        "source": "/audience.html",
+        "destination": "/",
+        "type": 301
+      },
+      {
+        "source": "/audience.html?session=:session",
+        "destination": "/?session=:session",
+        "type": 301
+      }
+    ],
     "rewrites": [
       {
         "source": "/broadcast",

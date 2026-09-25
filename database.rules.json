@@ -2,7 +2,22 @@
   "rules": {
     "liveSessions": {
       ".read": true,
-      ".write": true
+      ".write": true,
+      "$sessionId": {
+        ".read": true,
+        ".write": true,
+        "current": {
+          ".validate": "newData.hasChildren(['partialText', 'updatedAt'])"
+        },
+        "lastFinal": {
+          ".validate": "newData.hasChildren(['text', 'sequence', 'segmentId', 'updatedAt'])"
+        },
+        "translations": {
+          "$lang": {
+            ".validate": "newData.hasChildren(['text', 'segmentId'])"
+          }
+        }
+      }
     }
   }
 }

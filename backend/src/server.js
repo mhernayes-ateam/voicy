@@ -77,6 +77,14 @@ const server = http.createServer((req, res) => {
     return serveStaticFile(path.join(FRONTEND_DIR, 'index.html'), res);
   }
 
+  // audience.html fue removido — redirigir a index.html preservando el query string
+  if (pathname === '/audience.html' || pathname === '/audience') {
+    const qs = url.search || '';
+    res.writeHead(301, { 'Location': `/${qs}` });
+    res.end();
+    return;
+  }
+
   if (pathname === '/broadcast' || pathname.startsWith('/broadcast')) {
     return serveStaticFile(path.join(FRONTEND_DIR, 'broadcast.html'), res);
   }

@@ -13,7 +13,9 @@ export class SessionManager {
   constructor(options = {}) {
     this.apiKey = options.apiKey || process.env.GEMINI_API_KEY;
     this.publisher = new FirebasePublisher();
-    this.translator = new Translator(this.apiKey);
+    // Fix 4: Translator se instancia por sesión (no global) para que cada stage
+    // tenga su propia cola de traducción y cache independiente.
+    // this.translator era compartido y su flag isTranslating bloqueaba a todos los stages.
     this.sessions = new Map(); // sessionId -> SessionContext
   }
 
@@ -22,6 +24,9 @@ export class SessionManager {
 
     if (!session) {
       console.log(`[SessionManager] Creando nueva sesión: ${sessionId}`);
+
+      // Fix 4: Translator independiente por sesión
+      const sessionTranslator = new Translator(this.apiKey);
 
       const segmentManager = new SegmentManager(sessionId, async (payload) => {
         // Enviar actualizaciones a Firebase RTDB
@@ -71,6 +76,7 @@ export class SessionManager {
         broadcasterWs,
         geminiClient,
         segmentManager,
+        translator: sessionTranslator, // Fix 4: translator propio por sesión
         createdAt: Date.now()
       };
 
@@ -128,7 +134,9 @@ export class SessionManager {
   async translateAndPublish(sessionId, segment) {
     try {
       const tStart = Date.now();
-      const result = await this.translator.translateAuto(segment.text);
+      const session = this.sessions.get(sessionId);
+      if (!session || !session.translator) return;
+      const result = await session.translator.translateAuto(segment.text);
       const tEnd = Date.now();
 
       const translationLatencyMs = tEnd - tStart;
@@ -152,7 +160,7 @@ export class SessionManager {
       await this.publisher.publishTranslation(sessionId, payload);
 
       // Si el broadcaster está conectado, enviarle también el evento de traducción con métricas
-      const session = this.sessions.get(sessionId);
+      // (reutilizamos `session` ya declarada arriba)
       if (session && session.broadcasterWs && session.broadcasterWs.readyState === 1) {
         session.broadcasterWs.send(JSON.stringify({
           type: 'translation',

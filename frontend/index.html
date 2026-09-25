@@ -263,6 +263,9 @@
     let englishFinal = '';
     let portugueseFinal = '';
 
+    // Fix 3: guard de secuencia para descartar segmentos viejos tras reconexión de Gemini
+    let lastProcessedSequence = -1;
+
     // Historial acumulado para exportar a SRT
     const sessionHistory = [];
 
@@ -401,53 +404,73 @@
         firebase.initializeApp(firebaseConfig);
       }
       const db = firebase.database();
-      
-      // Escuchar estado en vivo de la sesión seleccionada
-      db.ref(`liveSessions/${sessionId}`).on('value', (snapshot) => {
+
+      // Fix 1: Listeners separados por nodo para evitar cascadas de onValue.
+      // Una sola escucha al nodo raíz dispara onValue hasta 4 veces por segmento
+      // (publishPartial + publishFinal + 3 PUT de traducciones + 1 PATCH activeTranslation).
+      // Al escuchar nodos específicos, cada listener se activa SOLO cuando SU dato cambia.
+
+      // 1a. Listener: texto parcial en vivo (interim)
+      db.ref(`liveSessions/${sessionId}/current`).on('value', (snapshot) => {
         const data = snapshot.val();
-        if (data) {
-          rtdbConnected = true;
-          originalPartial = data.current?.partialText || '';
-          
-          if (data.lastFinal?.text && data.lastFinal.text !== originalFinal) {
-            originalFinal = data.lastFinal.text;
-            if (currentMode === 'original') streamerAudience.setCommittedLine(originalFinal);
-            sessionHistory.push({
-              time: new Date(),
-              original: originalFinal,
-              es: data.translations?.es?.text || data.activeTranslation?.es || originalFinal,
-              en: data.translations?.en?.text || data.activeTranslation?.en || originalFinal,
-              pt: data.translations?.pt?.text || data.activeTranslation?.pt || originalFinal
-            });
-          }
-
-          if (data.translations?.es?.text) {
-            spanishFinal = data.translations.es.text;
-            if (currentMode === 'es') streamerAudience.setCommittedLine(spanishFinal);
-          } else if (data.activeTranslation?.es) {
-            spanishFinal = data.activeTranslation.es;
-            if (currentMode === 'es') streamerAudience.setCommittedLine(spanishFinal);
-          }
-
-          if (data.translations?.en?.text) {
-            englishFinal = data.translations.en.text;
-            if (currentMode === 'en') streamerAudience.setCommittedLine(englishFinal);
-          } else if (data.activeTranslation?.en) {
-            englishFinal = data.activeTranslation.en;
-            if (currentMode === 'en') streamerAudience.setCommittedLine(englishFinal);
-          }
-
-          if (data.translations?.pt?.text) {
-            portugueseFinal = data.translations.pt.text;
-            if (currentMode === 'pt') streamerAudience.setCommittedLine(portugueseFinal);
-          } else if (data.activeTranslation?.pt) {
-            portugueseFinal = data.activeTranslation.pt;
-            if (currentMode === 'pt') streamerAudience.setCommittedLine(portugueseFinal);
-          }
-
-          renderCaptions();
-        }
+        if (!data) return;
+        rtdbConnected = true;
+        originalPartial = data.partialText || '';
+        renderCaptions();
       });
+
+      // 1b. Listener: segmento final con guard de secuencia (Fix 3)
+      db.ref(`liveSessions/${sessionId}/lastFinal`).on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (!data || !data.text) return;
+        rtdbConnected = true;
+
+        // Fix 3: descartar segmentos viejos tras reconexión de Gemini
+        const incomingSeq = data.sequence ?? -1;
+        if (incomingSeq !== -1 && incomingSeq <= lastProcessedSequence) return;
+        lastProcessedSequence = incomingSeq;
+
+        if (data.text !== originalFinal) {
+          originalFinal = data.text;
+          if (currentMode === 'original') streamerAudience.setCommittedLine(originalFinal);
+          // Acumular en historial para exportar a SRT (las traducciones se agregan desde listener 1c)
+          sessionHistory.push({
+            time: new Date(),
+            seq: incomingSeq,
+            original: originalFinal,
+            es: spanishFinal || originalFinal,
+            en: englishFinal || originalFinal,
+            pt: portugueseFinal || originalFinal
+          });
+        }
+        renderCaptions();
+      });
+
+      // 1c. Listener: traducciones (es / en / pt) — nodo único que las agrupa
+      db.ref(`liveSessions/${sessionId}/translations`).on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+        rtdbConnected = true;
+
+        if (data.es?.text) {
+          spanishFinal = data.es.text;
+          if (currentMode === 'es') streamerAudience.setCommittedLine(spanishFinal);
+          // Actualizar la entrada de historial más reciente con la traducción real
+          if (sessionHistory.length > 0) sessionHistory[sessionHistory.length - 1].es = spanishFinal;
+        }
+        if (data.en?.text) {
+          englishFinal = data.en.text;
+          if (currentMode === 'en') streamerAudience.setCommittedLine(englishFinal);
+          if (sessionHistory.length > 0) sessionHistory[sessionHistory.length - 1].en = englishFinal;
+        }
+        if (data.pt?.text) {
+          portugueseFinal = data.pt.text;
+          if (currentMode === 'pt') streamerAudience.setCommittedLine(portugueseFinal);
+          if (sessionHistory.length > 0) sessionHistory[sessionHistory.length - 1].pt = portugueseFinal;
+        }
+        renderCaptions();
+      });
+
     } catch (e) {
       console.warn("RTDB offline:", e.message);
     }
