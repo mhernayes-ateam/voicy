@@ -33,6 +33,10 @@ export class GeminiConnectionManager {
     // Timers
     this.maxDurationTimer = null;
     this.MAX_SESSION_DURATION_MS = 9 * 60 * 1000; // 9 minutos para prevenir el corte de 10 min
+
+    // Backoff exponencial para quota errors (código 1011)
+    this.retryDelay = 5000;  // 5s inicial
+    this.MAX_RETRY_DELAY = 30000; // máximo 30s entre reintentos
   }
 
   async connect() {
@@ -73,8 +77,21 @@ export class GeminiConnectionManager {
 
         this.ws.on('close', (code, reason) => {
           console.warn(`[GeminiLive:${this.sessionId}] Desconectado (código ${code}): ${reason}`);
+          const isQuotaError = code === 1011;
+          if (isQuotaError) {
+            console.warn(`[GeminiLive:${this.sessionId}] ⚠️  QUOTA AGOTADA (free tier). Reintentando en ${this.retryDelay / 1000}s...`);
+            this.onStatusChange('quota_error');
+          } else {
+            this.retryDelay = 5000; // reset backoff en desconexiones normales
+          }
           this.cleanup();
           this.onStatusChange('disconnected');
+          // Reconectar con delay (backoff si es quota, inmediato si es normal)
+          const delay = isQuotaError ? this.retryDelay : 0;
+          if (delay > 0) {
+            this.retryDelay = Math.min(this.retryDelay * 2, this.MAX_RETRY_DELAY);
+            setTimeout(() => this.reconnect(), delay);
+          }
         });
       } catch (err) {
         this.cleanup();

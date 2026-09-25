@@ -100,7 +100,6 @@ export class SessionManager {
       this.publisher.clearSession(sessionId).catch(() => {});
       session.segmentManager.sequence = 0;
       session.segmentManager.currentPartialText = '';
-      session.segmentManager.finalizedPrefix = '';
       session.segmentManager.lastFinalSegment = null;
       if (session.segmentManager.silenceFinalizeTimer) {
         clearTimeout(session.segmentManager.silenceFinalizeTimer);

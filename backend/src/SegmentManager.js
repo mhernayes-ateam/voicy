@@ -24,83 +24,45 @@ export class SegmentManager {
     this.segmentStartTime = Date.now();
 
     this.currentPartialText = '';
-    this.finalizedPrefix = '';
     this.lastFinalSegment = null;
     this.silenceFinalizeTimer = null;
   }
 
-  handleInterim(rawText) {
-    if (!rawText) return;
+  handleInterim(text) {
+    if (!text) return;
+    this.currentPartialText = text;
 
-    let currentText = rawText;
-    if (this.finalizedPrefix && rawText.startsWith(this.finalizedPrefix)) {
-      currentText = rawText.slice(this.finalizedPrefix.length).trim();
-    } else if (this.finalizedPrefix && !rawText.startsWith(this.finalizedPrefix.slice(0, 15))) {
-      // Si Gemini inició una nueva emisión independiente, reiniciar prefijo
-      this.finalizedPrefix = '';
-      currentText = rawText.trim();
-    }
-
-    if (!currentText) return;
-
-    this.currentPartialText = currentText;
-    const words = currentText.split(/\s+/).filter(Boolean);
-
-    // Condición 1: Finalizar automáticamente si alcanza 8 palabras (máximo 2 líneas de subtítulo)
-    // Condición 2: Finalizar si termina en puntuación (. ? !) y tiene al menos 3 palabras
-    const hasPunctuation = /[.!?]$/.test(currentText) && words.length >= 3;
-    const reachesWordLimit = words.length >= 8;
-
-    if (hasPunctuation || reachesWordLimit) {
-      if (this.silenceFinalizeTimer) {
-        clearTimeout(this.silenceFinalizeTimer);
-        this.silenceFinalizeTimer = null;
-      }
-      this.finalizedPrefix = rawText;
-      this.handleFinal(currentText);
-      return;
-    }
-
-    // Notificar interim
+    // Notificar interim inmediatamente con latencia cero
     this.notifyUpdate({
       type: 'interim',
       segmentId: this.currentSegmentId,
       sequence: this.sequence,
-      partialText: currentText,
+      partialText: text,
       updatedAt: Date.now()
     });
 
-    // Auto-finalizar tras 600ms de pausa en la voz (antes 1200ms)
+    // Auto-finalizar tras 1.5s de pausa natural en la voz si Gemini no envió final aún
     if (this.silenceFinalizeTimer) clearTimeout(this.silenceFinalizeTimer);
     this.silenceFinalizeTimer = setTimeout(() => {
       if (this.currentPartialText && this.currentPartialText.trim().length > 0) {
-        this.finalizedPrefix = rawText;
         this.handleFinal(this.currentPartialText.trim());
       }
-    }, 600);
+    }, 1500);
   }
 
-  handleFinal(rawFinalText) {
+  handleFinal(finalText) {
     if (this.silenceFinalizeTimer) {
       clearTimeout(this.silenceFinalizeTimer);
       this.silenceFinalizeTimer = null;
     }
 
-    if (!rawFinalText || !rawFinalText.trim()) return;
+    if (!finalText || !finalText.trim()) return;
 
-    let textToFinalize = rawFinalText.trim();
-    if (this.finalizedPrefix && textToFinalize.startsWith(this.finalizedPrefix)) {
-      textToFinalize = textToFinalize.slice(this.finalizedPrefix.length).trim();
-    }
-    // Reiniciar prefijo para la siguiente emisión
-    this.finalizedPrefix = '';
-
-    if (!textToFinalize) return;
-
+    const trimmed = finalText.trim();
     const endMs = Date.now();
 
-    // Evitar procesar el mismo texto exacto dos veces seguidas en menos de 800ms
-    if (this.lastFinalSegment && this.lastFinalSegment.text === textToFinalize && (endMs - this.lastFinalSegment.endMs) < 800) {
+    // Evitar procesar el mismo texto exacto dos veces seguidas en menos de 1.5s
+    if (this.lastFinalSegment && this.lastFinalSegment.text === trimmed && (endMs - this.lastFinalSegment.endMs) < 1500) {
       return;
     }
 
@@ -110,13 +72,13 @@ export class SegmentManager {
       sequence: this.sequence,
       startMs: this.segmentStartTime,
       endMs: endMs,
-      text: textToFinalize,
+      text: trimmed,
       createdAt: new Date().toISOString()
     };
 
     this.lastFinalSegment = finalSegment;
 
-    // Notificar segmento finalizado para traducción inmediata
+    // Notificar segmento finalizado para traducción
     this.notifyUpdate({
       type: 'final',
       segment: finalSegment,

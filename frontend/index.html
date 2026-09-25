@@ -341,10 +341,7 @@
         this.bottomEl = bottomEl;
         this.placeholder = placeholder;
         this.previousCommitted = '';
-        this.targetWords = [];
-        this.displayedCount = 0;
-        this.maxWordsPerLine = 7;
-        this.timer = null;
+        this.maxWordsPerLine = 8;
         this.lastRawText = '';
       }
 
@@ -352,23 +349,31 @@
         if (!text || !text.trim()) return;
         const words = text.trim().split(/\s+/).filter(Boolean);
         if (words.length > 0) {
-          const line = words.slice(-this.maxWordsPerLine).join(' ');
-          if (line !== this.previousCommitted) {
-            this.previousCommitted = line;
-          }
+          this.previousCommitted = words.slice(-this.maxWordsPerLine).join(' ');
         }
       }
 
-      render(words) {
-        if (!words || words.length === 0) {
+      renderDirect(topText, bottomText) {
+        this.topEl.innerText = topText || '';
+        this.bottomEl.innerText = bottomText || this.placeholder;
+      }
+
+      streamTo(fullText) {
+        if (!fullText || !fullText.trim()) {
           this.topEl.innerText = '';
           this.bottomEl.innerText = this.placeholder;
+          this.lastRawText = '';
           return;
         }
 
+        const trimmed = fullText.trim();
+        if (trimmed === this.lastRawText) return;
+        this.lastRawText = trimmed;
+
+        const words = trimmed.split(/\s+/).filter(Boolean);
+
         if (words.length <= this.maxWordsPerLine) {
           const currentJoined = words.join(' ');
-          // Si la frase actual es distinta a la anterior comprometida, mostrar la anterior en Línea 1
           if (this.previousCommitted && this.previousCommitted !== currentJoined) {
             this.topEl.innerText = this.previousCommitted;
           } else {
@@ -383,84 +388,30 @@
           this.bottomEl.innerText = visible.slice(splitIdx).join(' ');
         }
       }
-
-      streamTo(fullText, animate = true) {
-        if (!fullText || !fullText.trim()) {
-          this.render([]);
-          this.displayedCount = 0;
-          this.targetWords = [];
-          this.lastRawText = '';
-          return;
-        }
-
-        const trimmed = fullText.trim();
-        if (trimmed === this.lastRawText) return;
-        this.lastRawText = trimmed;
-
-        const words = trimmed.split(/\s+/).filter(Boolean);
-        this.targetWords = words;
-
-        if (this.timer) {
-          clearInterval(this.timer);
-          this.timer = null;
-        }
-
-        if (!animate) {
-          this.displayedCount = words.length;
-          this.render(this.targetWords);
-          return;
-        }
-
-        if (this.displayedCount > this.targetWords.length ||
-            (this.displayedCount > 0 && this.targetWords[0] !== words[0])) {
-          this.displayedCount = 0;
-        }
-
-        // Mostrar la primera palabra nueva inmediatamente (sin esperar el tick del timer)
-        if (this.displayedCount < this.targetWords.length) {
-          this.displayedCount++;
-          this.render(this.targetWords.slice(0, this.displayedCount));
-        }
-
-        this.timer = setInterval(() => {
-          if (this.displayedCount < this.targetWords.length) {
-            this.displayedCount++;
-            this.render(this.targetWords.slice(0, this.displayedCount));
-          } else {
-            clearInterval(this.timer);
-            this.timer = null;
-          }
-        }, 22);
-      }
     }
 
     const streamerAudience = new GoldenRollUpStreamer(captionTop, captionLive, 'Esperando inicio de la conferencia...');
 
     function renderCaptions() {
-      let activeText = '';
-      let isPartial = false;
-
       if (currentMode === 'original') {
-        if (originalPartial) { activeText = originalPartial; isPartial = true; }
-        else { activeText = originalFinal; }
-      } else if (currentMode === 'es') {
-        if (spanishFinal) { activeText = spanishFinal; }
-        else if (originalPartial) { activeText = originalPartial; isPartial = true; }
-        else { activeText = originalFinal; }
-      } else if (currentMode === 'en') {
-        if (englishFinal) { activeText = englishFinal; }
-        else if (originalPartial) { activeText = originalPartial; isPartial = true; }
-        else { activeText = originalFinal; }
-      } else if (currentMode === 'pt') {
-        if (portugueseFinal) { activeText = portugueseFinal; }
-        else if (originalPartial) { activeText = originalPartial; isPartial = true; }
-        else { activeText = originalFinal; }
-      }
-
-      if (activeText) {
-        streamerAudience.streamTo(activeText, isPartial);
+        const text = originalPartial || originalFinal;
+        streamerAudience.streamTo(text);
       } else {
-        streamerAudience.streamTo('');
+        let activeTranslation = '';
+        if (currentMode === 'es') activeTranslation = spanishFinal;
+        else if (currentMode === 'en') activeTranslation = englishFinal;
+        else if (currentMode === 'pt') activeTranslation = portugueseFinal;
+
+        if (originalPartial) {
+          // El orador está hablando: mantener traducción previa arriba y mostrar voz en vivo abajo
+          streamerAudience.renderDirect(activeTranslation, `« ${originalPartial} »`);
+        } else if (activeTranslation) {
+          streamerAudience.streamTo(activeTranslation);
+        } else if (originalFinal) {
+          streamerAudience.streamTo(originalFinal);
+        } else {
+          streamerAudience.streamTo('');
+        }
       }
     }
 

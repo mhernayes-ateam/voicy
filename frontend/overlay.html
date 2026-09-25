@@ -144,20 +144,21 @@
           rtdbConnected = true;
           
           if (lang === 'original') {
-            if (data.lastFinal?.text) displayCaption(data.lastFinal.text, false);
-            else if (data.current?.partialText) displayCaption(data.current.partialText, true);
-          } else if (lang === 'es') {
-            const txt = data.translations?.es?.text || data.activeTranslation?.es;
-            if (txt) displayCaption(txt, false);
-            else if (data.current?.partialText) displayCaption(data.current.partialText, true);
-          } else if (lang === 'en') {
-            const txt = data.translations?.en?.text || data.activeTranslation?.en;
-            if (txt) displayCaption(txt, false);
-            else if (data.current?.partialText) displayCaption(data.current.partialText, true);
-          } else if (lang === 'pt') {
-            const txt = data.translations?.pt?.text || data.activeTranslation?.pt;
-            if (txt) displayCaption(txt, false);
-            else if (data.current?.partialText) displayCaption(data.current.partialText, true);
+            if (data.current?.partialText) displayCaption(data.current.partialText, true);
+            else if (data.lastFinal?.text) displayCaption(data.lastFinal.text, false);
+          } else {
+            let tr = '';
+            if (lang === 'es') tr = data.translations?.es?.text || data.activeTranslation?.es;
+            else if (lang === 'en') tr = data.translations?.en?.text || data.activeTranslation?.en;
+            else if (lang === 'pt') tr = data.translations?.pt?.text || data.activeTranslation?.pt;
+
+            if (data.current?.partialText) {
+              displayCaption(data.current.partialText, true);
+            } else if (tr) {
+              displayCaption(tr, false);
+            } else if (data.lastFinal?.text) {
+              displayCaption(data.lastFinal.text, false);
+            }
           }
         }
       });
