@@ -571,6 +571,7 @@
         statusIndicator.innerText = `Conectando con Gemini Live IA...`;
         isSetupComplete = false;
         isBroadcasting = false;
+        let setupTimeoutId = null;
 
         geminiWs = new WebSocket(GEMINI_WS_URL);
 
@@ -614,6 +615,7 @@
 
             if (payload.setupComplete) {
               console.log('[GeminiLive] Setup confirmado');
+              if (setupTimeoutId) clearTimeout(setupTimeoutId);
               isSetupComplete = true;
               isBroadcasting = true;
               recordStartTime = Date.now();
@@ -723,21 +725,35 @@
 
         geminiWs.onclose = (event) => {
           console.warn('[GeminiLive] WS cerrado:', event.code, event.reason);
+          if (setupTimeoutId) clearTimeout(setupTimeoutId);
           if (isBroadcasting) {
             if (event.code === 1011) {
               stopBroadcast('Límite de cuota temporal de la API alcanzado');
             } else {
               stopBroadcast('Conexión con el servicio de IA finalizada');
             }
+          } else {
+            // Cerrado antes de que setupComplete llegara — mostrar error real
+            const reason = event.reason ? `: ${event.reason}` : ` (código ${event.code})`;
+            stopBroadcast(`No se pudo iniciar la sesión de IA${reason}`);
           }
         };
 
         geminiWs.onerror = (err) => {
           console.error('[GeminiLive] WS error:', err);
-          if (isBroadcasting) {
-            stopBroadcast('Error de conexión con Gemini Live');
-          }
+          if (setupTimeoutId) clearTimeout(setupTimeoutId);
+          // Siempre detener y mostrar error, independiente del estado de transmisión
+          stopBroadcast('Error de conexión con Gemini Live. Verificá la clave de API.');
         };
+
+        // Timeout de 12s para el setup inicial (declarado antes de los handlers para closure correcto)
+        setupTimeoutId = setTimeout(() => {
+          if (!isSetupComplete && geminiWs) {
+            console.warn('[GeminiLive] Timeout de setup. No llegó setupComplete.');
+            geminiWs.close();
+            stopBroadcast('La IA no respondió a tiempo. Intentá de nuevo.');
+          }
+        }, 12000);
 
       } catch (err) {
         console.error('Error al iniciar transmisión:', err);
