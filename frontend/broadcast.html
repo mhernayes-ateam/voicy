@@ -308,12 +308,19 @@
 
     let currentMode = 'original'; // 'original' | 'es' | 'en' | 'pt'
 
-    // Buffers de texto
+    // Buffers de texto y traducciones con soporte de histórico roll-up
     let originalPartial = '';
     let originalFinal = '';
+    let previousOriginalFinal = '';
+
     let spanishFinal = '';
+    let previousSpanishFinal = '';
+
     let englishFinal = '';
+    let previousEnglishFinal = '';
+
     let portugueseFinal = '';
+    let previousPortugueseFinal = '';
 
     // Historial acumulado y métricas del bloque actual de grabación
     let sessionHistory = [];
@@ -427,19 +434,29 @@
         streamerLive.streamTo(text);
       } else {
         let activeTranslation = '';
-        if (currentMode === 'es') activeTranslation = spanishFinal;
-        else if (currentMode === 'en') activeTranslation = englishFinal;
-        else if (currentMode === 'pt') activeTranslation = portugueseFinal;
+        let previousTranslation = '';
+        if (currentMode === 'es') {
+          activeTranslation = spanishFinal;
+          previousTranslation = previousSpanishFinal;
+        } else if (currentMode === 'en') {
+          activeTranslation = englishFinal;
+          previousTranslation = previousEnglishFinal;
+        } else if (currentMode === 'pt') {
+          activeTranslation = portugueseFinal;
+          previousTranslation = previousPortugueseFinal;
+        }
 
-        if (originalPartial) {
-          // El orador está hablando: mantener traducción previa arriba y mostrar voz en vivo abajo
-          streamerLive.renderDirect(activeTranslation, `« ${originalPartial} »`);
-        } else if (activeTranslation) {
-          streamerLive.streamTo(activeTranslation);
-        } else if (originalFinal) {
-          streamerLive.streamTo(originalFinal);
+        if (activeTranslation) {
+          if (previousTranslation && previousTranslation !== activeTranslation) {
+            streamerLive.renderDirect(previousTranslation, activeTranslation);
+          } else {
+            streamerLive.streamTo(activeTranslation);
+          }
         } else {
-          streamerLive.streamTo('');
+          const placeholderMsg = isBroadcasting 
+            ? 'Traduciendo al ' + (currentMode === 'en' ? 'inglés' : currentMode === 'pt' ? 'portugués' : 'español') + '...' 
+            : 'Presioná RECORD para comenzar...';
+          streamerLive.renderDirect('', placeholderMsg);
         }
       }
     }
@@ -562,12 +579,20 @@
             const msg = JSON.parse(event.data);
             if (msg.type === 'interim') {
               originalPartial = msg.data.partialText || '';
-              renderCaptions();
+              if (currentMode === 'original') {
+                renderCaptions();
+              }
             } else if (msg.type === 'final') {
               const txt = msg.data.segment?.text || '';
-              originalFinal = txt;
+              if (txt && txt !== originalFinal) {
+                previousOriginalFinal = originalFinal;
+                originalFinal = txt;
+              }
               originalPartial = '';
-              if (currentMode === 'original') streamerLive.setCommittedLine(txt);
+              if (currentMode === 'original') {
+                streamerLive.setCommittedLine(txt);
+                renderCaptions();
+              }
               
               // Guardar en el historial del bloque actual
               sessionHistory.push({
@@ -578,23 +603,29 @@
                 en: englishFinal || txt,
                 pt: portugueseFinal || txt
               });
-              renderCaptions();
             } else if (msg.type === 'translation') {
-              const trEs = msg.data.es || msg.data.text || '';
-              const trEn = msg.data.en || msg.data.text || '';
-              const trPt = msg.data.pt || msg.data.text || '';
-              spanishFinal = trEs;
-              englishFinal = trEn;
-              portugueseFinal = trPt;
-              if (currentMode === 'es') streamerLive.setCommittedLine(trEs);
-              else if (currentMode === 'en') streamerLive.setCommittedLine(trEn);
-              else if (currentMode === 'pt') streamerLive.setCommittedLine(trPt);
+              const trEs = msg.data.es || '';
+              const trEn = msg.data.en || '';
+              const trPt = msg.data.pt || '';
+
+              if (trEs && trEs !== spanishFinal) {
+                previousSpanishFinal = spanishFinal;
+                spanishFinal = trEs;
+              }
+              if (trEn && trEn !== englishFinal) {
+                previousEnglishFinal = englishFinal;
+                englishFinal = trEn;
+              }
+              if (trPt && trPt !== portugueseFinal) {
+                previousPortugueseFinal = portugueseFinal;
+                portugueseFinal = trPt;
+              }
 
               if (sessionHistory.length > 0) {
                 const last = sessionHistory[sessionHistory.length - 1];
-                last.es = trEs;
-                last.en = trEn;
-                last.pt = trPt;
+                if (trEs) last.es = trEs;
+                if (trEn) last.en = trEn;
+                if (trPt) last.pt = trPt;
               }
               renderCaptions();
             } else if (msg.type === 'gemini_status') {

@@ -79,36 +79,27 @@ export class FirebasePublisher {
         updatedAt: payload.updatedAt
       };
 
-      // Guardar ES, EN y PT en el mapa de traducciones
-      const esUrl = `${this.databaseURL}/liveSessions/${sessionId}/translations/es.json`;
-      const enUrl = `${this.databaseURL}/liveSessions/${sessionId}/translations/en.json`;
-      const ptUrl = `${this.databaseURL}/liveSessions/${sessionId}/translations/pt.json`;
+      // Guardar ES, EN y PT atómicamente en el nodo /translations
+      const translationsUrl = `${this.databaseURL}/liveSessions/${sessionId}/translations.json`;
+      const translationsPayload = {
+        es: { ...translationPayload, text: payload.es || payload.text },
+        en: { ...translationPayload, text: payload.en || payload.text },
+        pt: { ...translationPayload, text: payload.pt || payload.text }
+      };
+
+      await fetch(translationsUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(translationsPayload)
+      });
+
+      // Actualizar puntero activeTranslation
       const activeUrl = `${this.databaseURL}/liveSessions/${sessionId}/activeTranslation.json`;
-
-      fetch(esUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...translationPayload, text: payload.es || payload.text })
-      }).catch(() => {});
-
-      fetch(enUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...translationPayload, text: payload.en || payload.text })
-      }).catch(() => {});
-
-      fetch(ptUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...translationPayload, text: payload.pt || payload.text })
-      }).catch(() => {});
-
-      // Actualizar el puntero activeTranslation
-      await fetch(activeUrl, {
+      fetch(activeUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(translationPayload)
-      });
+      }).catch(() => {});
     } catch (err) {
       console.error(`[FirebasePublisher] Error publicando traducción:`, err.message);
     }

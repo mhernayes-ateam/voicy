@@ -141,7 +141,7 @@
       let lastResetAt = 0;
       db.ref(`liveSessions/${sessionId}`).on('value', (snapshot) => {
         const data = snapshot.val();
-        if (!data || data.status === 'stopped' || (!data.lastFinal?.text && !data.current?.partialText)) {
+        if (!data || data.status === 'stopped') {
           captionText.innerText = '';
           overlayBox.classList.remove('visible');
           return;
@@ -149,11 +149,9 @@
 
         if (data.sessionResetAt && data.sessionResetAt !== lastResetAt) {
           lastResetAt = data.sessionResetAt;
-          if (!data.current?.partialText && !data.lastFinal?.text) {
-            captionText.innerText = '';
-            overlayBox.classList.remove('visible');
-            return;
-          }
+          captionText.innerText = '';
+          overlayBox.classList.remove('visible');
+          return;
         }
 
         rtdbConnected = true;
@@ -167,12 +165,8 @@
           else if (lang === 'en') tr = data.translations?.en?.text || data.activeTranslation?.en;
           else if (lang === 'pt') tr = data.translations?.pt?.text || data.activeTranslation?.pt;
 
-          if (data.current?.partialText) {
-            displayCaption(data.current.partialText, true);
-          } else if (tr) {
+          if (tr) {
             displayCaption(tr, false);
-          } else if (data.lastFinal?.text) {
-            displayCaption(data.lastFinal.text, false);
           }
         }
       });
