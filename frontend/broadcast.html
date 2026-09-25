@@ -6,6 +6,11 @@
   <meta name="robots" content="noindex, nofollow">
   <title>Voicy — Speaker Studio</title>
   <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Firebase Compat SDKs para Realtime Database -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
   <style>
     .record-bar {
       display: flex;
@@ -52,22 +57,6 @@
       100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
 
-    .source-select-minimal {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-      border-radius: 9999px;
-      padding: 9px 16px;
-      font-size: 13px;
-      outline: none;
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-    .source-select-minimal:hover {
-      border-color: rgba(255, 255, 255, 0.2);
-      color: #fff;
-    }
-
     .stage-tab {
       background: transparent;
       border: 1px solid var(--border);
@@ -84,22 +73,6 @@
       border-color: var(--brand-purple);
       color: #fff;
       background: rgba(123, 79, 255, 0.18);
-    }
-
-    .lang-pill {
-      padding: 6px 12px;
-      font-size: 11px;
-      font-weight: 700;
-      border-radius: 9px;
-      border: none;
-      cursor: pointer;
-      background: transparent;
-      color: var(--text-muted);
-      transition: all 0.15s ease;
-    }
-    .lang-pill.active {
-      background: var(--brand-purple);
-      color: #fff;
     }
 
     .status-dot-mini {
@@ -153,15 +126,14 @@
     <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 14px;">
       <a href="/" class="brand-logo" style="font-size:18px;">
         <div class="brand-logo-icon" style="width:26px; height:26px; font-size:13px;">🎙️</div>
-        <span>Voicy</span>
+        <span>Voicy <span style="font-size:12px; color:#A78BFA; font-weight:600;">Studio</span></span>
       </a>
 
-      <!-- Selector de Idioma Cuádruple: ORIGINAL | ESPAÑOL | ENGLISH | PORTUGUÊS -->
-      <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:12px; border:1px solid var(--border); overflow-x:auto;">
-        <button id="btnLangOriginal" class="lang-pill active" onclick="setLanguage('original')">ORIGINAL</button>
-        <button id="btnLangEs" class="lang-pill" onclick="setLanguage('es')">ESPAÑOL</button>
-        <button id="btnLangEn" class="lang-pill" onclick="setLanguage('en')">ENGLISH</button>
-        <button id="btnLangPt" class="lang-pill" onclick="setLanguage('pt')">PORTUGUÊS</button>
+      <!-- Acceso directo a vista audiencia -->
+      <div style="display:flex; align-items:center; gap:8px;">
+        <a href="/" target="_blank" class="stage-tab" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none;" title="Abrir pantalla para la audiencia">
+          <span>👥 Vista Audiencia ↗</span>
+        </a>
       </div>
     </div>
 
@@ -176,13 +148,11 @@
         </h2>
       </div>
 
-      <!-- Selector de Idioma del Orador y Escenario (Multi-Stage Nerdearla) -->
+      <!-- Selector de Escenario (Multi-Stage Nerdearla) -->
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-        <div style="display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.04); padding:3px 6px; border-radius:10px; border:1px solid var(--border);" title="Idioma hablado por el orador en vivo">
-          <span style="font-size:11px; color:var(--text-muted); font-weight:600; padding-left:4px;">Voz Orador:</span>
-          <button id="btnSpeakerEs" class="stage-tab active" style="padding:4px 8px; font-size:11px;" onclick="setSpeakerLanguage('es')">🇪🇸 Español</button>
-          <button id="btnSpeakerEn" class="stage-tab" style="padding:4px 8px; font-size:11px;" onclick="setSpeakerLanguage('en')">🇺🇸 English</button>
-        </div>
+        <span style="font-size:11px; color:#10B981; display:flex; align-items:center; gap:4px; font-weight:600; background:rgba(16,185,129,0.1); padding:4px 10px; border-radius:999px; border:1px solid rgba(16,185,129,0.25);">
+          ✨ Detección automática de voz
+        </span>
         <div style="display:flex; gap:6px;">
           <button id="tabStage1" class="stage-tab active" onclick="selectStage('stage-1')">Stage 1</button>
           <button id="tabStage2" class="stage-tab" onclick="selectStage('stage-2')">Stage 2</button>
@@ -201,8 +171,8 @@
       <!-- Indicador de Nivel de Micrófono en Vivo -->
       <div id="micMeterWrapper" style="display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); padding:6px 14px; border-radius:999px; height:38px;" title="Nivel de entrada del micrófono">
         <span id="micIcon" style="font-size:14px; opacity:0.6;">🎙️</span>
-        <div style="width:60px; height:6px; background:rgba(255,255,255,0.1); border-radius:999px; overflow:hidden;">
-          <div id="micMeterFill" style="width:0%; height:100%; background:linear-gradient(90deg, #10B981, #F59E0B, #EF4444); border-radius:999px; transition:width 0.05s ease-out;"></div>
+        <div style="width:60px; height:6px; background:rgba(255,255,255,0.1); border-radius:9999px; overflow:hidden;">
+          <div id="micMeterFill" style="width:0%; height:100%; background:linear-gradient(90deg, #10B981, #F59E0B, #EF4444); border-radius:9999px; transition:width 0.05s ease-out;"></div>
         </div>
       </div>
 
@@ -213,7 +183,7 @@
     </div>
 
     <div style="font-size:12px; color:var(--text-dim); margin-bottom:12px;">
-      <span id="statusIndicator">Listo para transmitir</span>
+      <span id="statusIndicator">Listo para transmitir • Solo pulsá RECORD y hablá</span>
     </div>
 
     <!-- Pantalla Principal de Subtítulos: 2 Líneas Dinámicas Roll-Up (Estándar Dorado) -->
@@ -254,8 +224,8 @@
         </div>
       </div>
       <div style="font-size:11px; color:var(--text-dim); margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
-        <span>ℹ️ Bloque cerrado. Al pulsar <strong>RECORD</strong> se descartará automáticamente y comenzará una nueva grabación limpia.</span>
-        <span style="color:#34D399; font-weight:600;">✔ Listo para descartar</span>
+        <span>ℹ️ Bloque cerrado. Al pulsar <strong>RECORD</strong> se iniciará una nueva grabación limpia.</span>
+        <span style="color:#34D399; font-weight:600;">✔ Listo</span>
       </div>
     </div>
 
@@ -311,45 +281,45 @@
     const btnRecordToggle = document.getElementById('btnRecordToggle');
     const recordDot = document.getElementById('recordDot');
     const recordText = document.getElementById('recordText');
-    const selAudioSource = document.getElementById('selAudioSource');
     const statusIndicator = document.getElementById('statusIndicator');
+    const micMeterFill = document.getElementById('micMeterFill');
 
-    const btnLangOriginal = document.getElementById('btnLangOriginal');
-    const btnLangEs = document.getElementById('btnLangEs');
-    const btnLangEn = document.getElementById('btnLangEn');
-    const btnLangPt = document.getElementById('btnLangPt');
-
-    let currentMode = 'original'; // 'original' | 'es' | 'en' | 'pt'
-    let speakerLang = urlParams.get('speakerLang') || 'es'; // 'es' (default) | 'en'
-
-    // Buffers de texto y traducciones con soporte de histórico roll-up
-    let originalPartial = '';
-    let originalFinal = '';
-    let previousOriginalFinal = '';
-
-    let spanishFinal = '';
-    let previousSpanishFinal = '';
-
-    let englishFinal = '';
-    let previousEnglishFinal = '';
-
-    let portugueseFinal = '';
-    let previousPortugueseFinal = '';
-
-    // Historial acumulado y métricas del bloque actual de grabación
+    // Estado de la sesión
+    let isBroadcasting = false;
+    let isSetupComplete = false;
     let sessionHistory = [];
+    let sequenceCounter = 0;
     let recordStartTime = null;
 
-    // Variables de audio y WebSocket
+    // Buffers de texto para el orador
+    let originalPartial = '';
+    let originalFinal = '';
+
+    // Variables de Audio y WebSocket de Gemini Live
     let audioContext = null;
     let mediaStream = null;
     let workletNode = null;
     let analyserNode = null;
     let micAnimId = null;
-    const micMeterFill = document.getElementById('micMeterFill');
-    let ws = null;
-    let isBroadcasting = false;
-    let sampleSourceNode = null;
+    let geminiWs = null;
+    let sessionHandle = null;
+
+    // Configuración Firebase Realtime Database Directa
+    const firebaseConfig = {
+      apiKey: "AIzaSyBI6soKQDeMSxWwQxLjjBwVQPm34ulet4E",
+      appId: "1:774183311627:web:3bf35ac8094622b68d6a0e",
+      databaseURL: "https://voicy-3fca6-default-rtdb.firebaseio.com",
+      projectId: "voicy-3fca6"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
+    // Configuración Gemini Live API (Conexión WebSocket directa y serverless)
+    const GEMINI_API_KEY = urlParams.get('key') || atob("QVEuQWI4Uk42S2JJOXJaR0Y1djhkcE5uaXJHSUpwTlotdHlzM2hCYXNpWkVrcTNYYmRvYnc=");
+    const GEMINI_WS_URL = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${GEMINI_API_KEY}`;
 
     function updateStageTabs() {
       sessionTitle.innerText = sessionId.replace('-', ' ').toUpperCase();
@@ -369,35 +339,10 @@
       window.history.replaceState(null, '', `?session=${sessionId}`);
       updateStageTabs();
       dismissPackagedBlock();
-      // Limpiar buffers
       originalPartial = '';
       originalFinal = '';
-      spanishFinal = '';
-      englishFinal = '';
-      portugueseFinal = '';
-      streamerLive.committedLine = '';
-      renderCaptions();
-    }
-
-    function setLanguage(mode) {
-      currentMode = mode;
-      btnLangOriginal.classList.toggle('active', mode === 'original');
-      btnLangEs.classList.toggle('active', mode === 'es');
-      btnLangEn.classList.toggle('active', mode === 'en');
-      btnLangPt.classList.toggle('active', mode === 'pt');
-      renderCaptions();
-    }
-
-    function setSpeakerLanguage(lang) {
-      speakerLang = lang;
-      const btnEs = document.getElementById('btnSpeakerEs');
-      const btnEn = document.getElementById('btnSpeakerEn');
-      if (btnEs) btnEs.classList.toggle('active', lang === 'es');
-      if (btnEn) btnEn.classList.toggle('active', lang === 'en');
-
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: 'configure', speakerLang: lang }));
-      }
+      streamerLive.previousCommitted = '';
+      streamerLive.streamTo('');
     }
 
     class GoldenRollUpStreamer {
@@ -416,11 +361,6 @@
         if (words.length > 0) {
           this.previousCommitted = words.slice(-this.maxWordsPerLine).join(' ');
         }
-      }
-
-      renderDirect(topText, bottomText) {
-        this.topEl.innerText = topText || '';
-        this.bottomEl.innerText = bottomText || (isBroadcasting ? 'Escuchando al orador...' : this.placeholder);
       }
 
       streamTo(fullText) {
@@ -446,7 +386,6 @@
           }
           this.bottomEl.innerText = currentJoined;
         } else {
-          // Roll-up de 2 líneas dentro de una oración larga
           const visible = words.slice(-(this.maxWordsPerLine * 2));
           const splitIdx = Math.max(1, visible.length - this.maxWordsPerLine);
           this.topEl.innerText = visible.slice(0, splitIdx).join(' ');
@@ -457,57 +396,94 @@
 
     const streamerLive = new GoldenRollUpStreamer(captionTop, captionLive, 'Presioná RECORD para comenzar...');
 
-    function renderCaptions() {
-      if (currentMode === 'original') {
-        const text = originalPartial || originalFinal;
-        streamerLive.streamTo(text);
-      } else {
-        let activeTranslation = '';
-        let previousTranslation = '';
-        if (currentMode === 'es') {
-          activeTranslation = spanishFinal;
-          previousTranslation = previousSpanishFinal;
-        } else if (currentMode === 'en') {
-          activeTranslation = englishFinal;
-          previousTranslation = previousEnglishFinal;
-        } else if (currentMode === 'pt') {
-          activeTranslation = portugueseFinal;
-          previousTranslation = previousPortugueseFinal;
-        }
+    // Detección simple del idioma para orquestar la traducción automática hacia la audiencia
+    function detectLanguageSimple(text) {
+      const t = text.toLowerCase();
+      const ptSpecific = ['obrigado', 'obrigada', 'muito', 'estarem', 'palestra', 'você', 'vocês', 'gente', 'então', 'também', 'não', 'falar', 'sobre', 'estamos'];
+      const esSpecific = ['gracias', 'charla', 'hoy', 'entonces', 'también', 'bienvenidos', 'vamos', 'todos', 'hablar', 'desplegar', 'nuestros', 'nuestras'];
+      const enSpecific = ['the', 'and', 'welcome', 'today', 'everyone', 'deploying', 'using', 'with', 'about', 'this', 'that', 'from', 'have', 'will', 'cloud'];
 
-        if (activeTranslation) {
-          if (previousTranslation && previousTranslation !== activeTranslation) {
-            streamerLive.renderDirect(previousTranslation, activeTranslation);
-          } else {
-            streamerLive.streamTo(activeTranslation);
-          }
-        } else {
-          const placeholderMsg = isBroadcasting 
-            ? 'Traduciendo al ' + (currentMode === 'en' ? 'inglés' : currentMode === 'pt' ? 'portugués' : 'español') + '...' 
-            : 'Presioná RECORD para comenzar...';
-          streamerLive.renderDirect('', placeholderMsg);
-        }
+      let ptScore = 0, esScore = 0, enScore = 0;
+      for (const w of t.split(/\s+/)) {
+        if (ptSpecific.includes(w)) ptScore += 2;
+        if (esSpecific.includes(w)) esScore += 2;
+        if (enSpecific.includes(w)) enScore += 2;
       }
+
+      if (enScore > esScore && enScore > ptScore) return 'en';
+      if (ptScore > esScore && ptScore > enScore) return 'pt';
+      return 'es'; // default
     }
 
-    let connectTimeout = null;
+    const translationCache = new Map();
 
-    function getWsUrl() {
-      const q = `?speakerLang=${encodeURIComponent(speakerLang)}`;
+    async function translateMyMemory(text, from, to) {
+      try {
+        const q = encodeURIComponent(text);
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${q}&langpair=${from}|${to}`, {
+          signal: AbortSignal.timeout(3500)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const tr = data.responseData?.translatedText;
+          if (tr && typeof tr === 'string' && tr.trim() && !tr.includes('MYMEMORY WARNING')) {
+            return tr.trim();
+          }
+        }
+      } catch (e) {}
+      return null;
+    }
 
-      // 1. Si se especificó ?backend=... en la URL
-      const customBackend = urlParams.get('backend');
-      if (customBackend) {
-        return customBackend.startsWith('ws') ? `${customBackend}${q}` : `ws://${customBackend}/ws/broadcast/${sessionId}${q}`;
+    async function translateAuto(text) {
+      if (!text || !text.trim()) {
+        return { es: '', en: '', pt: '' };
+      }
+      const trimmed = text.trim();
+      if (translationCache.has(trimmed)) {
+        return translationCache.get(trimmed);
       }
 
-      // 2. Si estamos en localhost o 127.0.0.1
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return `ws://localhost:8090/ws/broadcast/${sessionId}${q}`;
-      }
+      const detected = detectLanguageSimple(trimmed);
+      let es = trimmed, en = trimmed, pt = trimmed;
 
-      // 3. Si se accede desde Firebase Hosting o IP de red:
-      return `ws://localhost:8090/ws/broadcast/${sessionId}${q}`;
+      try {
+        if (detected === 'es') {
+          const [tEn, tPt] = await Promise.all([
+            translateMyMemory(trimmed, 'es', 'en'),
+            translateMyMemory(trimmed, 'es', 'pt')
+          ]);
+          en = tEn || trimmed;
+          pt = tPt || trimmed;
+        } else if (detected === 'en') {
+          const [tEs, tPt] = await Promise.all([
+            translateMyMemory(trimmed, 'en', 'es'),
+            translateMyMemory(trimmed, 'en', 'pt')
+          ]);
+          es = tEs || trimmed;
+          pt = tPt || trimmed;
+        } else if (detected === 'pt') {
+          const [tEs, tEn] = await Promise.all([
+            translateMyMemory(trimmed, 'pt', 'es'),
+            translateMyMemory(trimmed, 'pt', 'en')
+          ]);
+          es = tEs || trimmed;
+          en = tEn || trimmed;
+        }
+      } catch (e) {}
+
+      const result = { es, en, pt };
+      translationCache.set(trimmed, result);
+      return result;
+    }
+
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
     }
 
     async function toggleBroadcast() {
@@ -519,216 +495,282 @@
     }
 
     async function startBroadcast() {
-      // 1. Limpieza instantánea sincrónica (0ms) de la pantalla antes de cualquier petición de red
+      // Limpieza instantánea sincrónica de pantalla
       dismissPackagedBlock(false);
       captionTop.innerText = '';
-      captionLive.innerText = 'Iniciando nueva grabación...';
+      captionLive.innerText = 'Iniciando micrófono y conexión de IA...';
       originalPartial = '';
       originalFinal = '';
-      spanishFinal = '';
-      englishFinal = '';
-      portugueseFinal = '';
       sessionHistory = [];
+      sequenceCounter = 0;
       streamerLive.previousCommitted = '';
       streamerLive.lastRawText = '';
 
       try {
         btnRecordToggle.disabled = true;
         recordText.innerText = 'CONECTANDO...';
-        statusIndicator.innerText = `Iniciando nueva grabación para ${sessionId.toUpperCase()}...`;
+        statusIndicator.innerText = `Pidiendo acceso al micrófono para ${sessionId.toUpperCase()}...`;
 
-        const wsUrl = getWsUrl();
-
-        if (connectTimeout) clearTimeout(connectTimeout);
-        connectTimeout = setTimeout(() => {
-          if (!isBroadcasting) {
-            console.warn('Timeout conectando WebSocket');
-            statusIndicator.innerText = 'Tiempo de espera agotado. Verificá que el servidor esté activo en http://localhost:8090';
-            stopBroadcast();
-          }
-        }, 6000);
-
-        function startMicMeterLoop() {
-          if (micAnimId) cancelAnimationFrame(micAnimId);
-          function loop() {
-            if (!isBroadcasting || !analyserNode) {
-              if (micMeterFill) micMeterFill.style.width = '0%';
-              return;
-            }
-            const data = new Uint8Array(analyserNode.frequencyBinCount);
-            analyserNode.getByteFrequencyData(data);
-            let sum = 0;
-            for (let i = 0; i < data.length; i++) {
-              sum += data[i];
-            }
-            const avg = sum / data.length;
-            const pct = Math.min(100, Math.round((avg / 64) * 100));
-            if (micMeterFill) micMeterFill.style.width = `${pct}%`;
-            micAnimId = requestAnimationFrame(loop);
-          }
-          micAnimId = requestAnimationFrame(loop);
+        // 1. Iniciar captura de audio del micrófono y resampler PRIMERO
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
         }
 
-        ws = new WebSocket(wsUrl);
-        ws.binaryType = 'arraybuffer';
+        await audioContext.audioWorklet.addModule('/worklets/pcm-processor.js');
 
-        ws.onopen = async () => {
-          if (connectTimeout) clearTimeout(connectTimeout);
-          try {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioContext.state === 'suspended') {
-              await audioContext.resume();
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        const sourceNode = audioContext.createMediaStreamSource(mediaStream);
+
+        // VU Meter visual
+        analyserNode = audioContext.createAnalyser();
+        analyserNode.fftSize = 256;
+        sourceNode.connect(analyserNode);
+        startMicMeterLoop();
+
+        // Resampler 16kHz PCM
+        workletNode = new AudioWorkletNode(audioContext, 'streaming-pcm-resampler');
+        workletNode.port.onmessage = (event) => {
+          if (isBroadcasting && geminiWs && geminiWs.readyState === WebSocket.OPEN && isSetupComplete) {
+            try {
+              const b64 = arrayBufferToBase64(event.data.buffer);
+              geminiWs.send(JSON.stringify({
+                realtimeInput: {
+                  mediaChunks: [{ mimeType: 'audio/pcm;rate=16000', data: b64 }]
+                }
+              }));
+            } catch (e) {
+              console.error('[Audio] Error enviando chunk:', e);
             }
-
-            await audioContext.audioWorklet.addModule('/worklets/pcm-processor.js');
-
-            mediaStream = await navigator.mediaDevices.getUserMedia({
-              audio: {
-                channelCount: 1,
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true
-              }
-            });
-            const sourceNode = audioContext.createMediaStreamSource(mediaStream);
-
-            // 1. Conectar AnalyserNode para monitoreo visual del micrófono en vivo
-            analyserNode = audioContext.createAnalyser();
-            analyserNode.fftSize = 256;
-            sourceNode.connect(analyserNode);
-            startMicMeterLoop();
-
-            // 2. AudioWorklet resampler para PCM 16kHz
-            workletNode = new AudioWorkletNode(audioContext, 'streaming-pcm-resampler');
-
-            workletNode.port.onmessage = (event) => {
-              if (isBroadcasting && ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(event.data.buffer);
-              }
-            };
-
-            sourceNode.connect(workletNode);
-
-            // 3. MuteGain conectado a destination para garantizar que Chrome nunca pause el AudioWorklet
-            const muteGain = audioContext.createGain();
-            muteGain.gain.value = 0;
-            workletNode.connect(muteGain);
-            muteGain.connect(audioContext.destination);
-
-            isBroadcasting = true;
-            recordStartTime = Date.now();
-
-            // Asegurar pantalla 100% limpia de nuevo
-            captionTop.innerText = '';
-            captionLive.innerText = 'Escuchando al orador...';
-
-            btnRecordToggle.disabled = false;
-            btnRecordToggle.classList.add('recording');
-            recordDot.style.background = '#F87171';
-            recordText.innerText = 'DETENER';
-
-            tabStage1.disabled = true;
-            tabStage2.disabled = true;
-            tabStage3.disabled = true;
-            statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Transmitiendo audio)`;
-          } catch (err) {
-            console.error('Error al inicializar captura de audio:', err);
-            alert(`Error al acceder al micrófono o audio: ${err.message}\n\nAsegurate de permitir el acceso al micrófono en el navegador.`);
-            stopBroadcast(`Error de micrófono: ${err.message}`);
           }
         };
+        sourceNode.connect(workletNode);
 
-        ws.onmessage = (event) => {
+        // MuteGain para que Chrome mantenga el AudioWorklet activo
+        const muteGain = audioContext.createGain();
+        muteGain.gain.value = 0;
+        workletNode.connect(muteGain);
+        muteGain.connect(audioContext.destination);
+
+        // 2. Notificar a Firebase RTDB inicio limpio de la sesión
+        await db.ref(`liveSessions/${sessionId}`).update({
+          status: 'live',
+          sessionResetAt: Date.now(),
+          current: { partialText: '', updatedAt: Date.now() },
+          lastFinal: { text: '', sequence: 0, segmentId: '', updatedAt: Date.now() }
+        });
+
+        // 3. Conectar a Gemini Live WebSocket con listeners ya sincronizados
+        statusIndicator.innerText = `Conectando con Gemini Live IA...`;
+        isSetupComplete = false;
+        isBroadcasting = false;
+
+        geminiWs = new WebSocket(GEMINI_WS_URL);
+
+        geminiWs.onopen = () => {
+          console.log('[GeminiLive] WebSocket conectado. Enviando Setup...');
+          statusIndicator.innerText = `Configurando IA en vivo...`;
+
+          const setupMsg = {
+            setup: {
+              model: 'models/gemini-3.5-transcribe-live',
+              generationConfig: {
+                responseModalities: ['TEXT']
+              },
+              inputAudioTranscription: {
+                mode: 'SMART',
+                customVocabulary: [
+                  'Nerdearla', 'Gemini', 'Kubernetes', 'TypeScript', 'React',
+                  'A-TEAM', 'Cloud Run', 'Firestore', 'Antigravity', 'Voicy'
+                ]
+              }
+            }
+          };
+
+          if (sessionHandle) {
+            setupMsg.setup.sessionResumption = { sessionHandle };
+          }
+
+          geminiWs.send(JSON.stringify(setupMsg));
+        };
+
+        geminiWs.onmessage = (event) => {
           try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'interim') {
-              originalPartial = msg.data.partialText || '';
-              if (currentMode === 'original') {
-                renderCaptions();
-              }
-            } else if (msg.type === 'final') {
-              const txt = msg.data.segment?.text || '';
-              if (txt && txt !== originalFinal) {
-                previousOriginalFinal = originalFinal;
-                originalFinal = txt;
-              }
-              originalPartial = '';
-              if (currentMode === 'original') {
-                streamerLive.setCommittedLine(txt);
-                renderCaptions();
-              }
-              
-              // Guardar en el historial del bloque actual si no está vacío
-              if (txt && txt.trim()) {
-                sessionHistory.push({
-                  time: new Date(),
-                  seq: msg.data.segment?.sequence || sessionHistory.length,
-                  original: txt.trim(),
-                  es: spanishFinal || txt.trim(),
-                  en: englishFinal || txt.trim(),
-                  pt: portugueseFinal || txt.trim()
+            const payload = JSON.parse(event.data);
+
+            if (payload.error) {
+              console.error('[GeminiLive] Error recibido:', payload.error);
+              const errMsg = payload.error.message || JSON.stringify(payload.error);
+              stopBroadcast(`Error de IA: ${errMsg}`);
+              return;
+            }
+
+            if (payload.setupComplete) {
+              console.log('[GeminiLive] Setup confirmado');
+              isSetupComplete = true;
+              isBroadcasting = true;
+              recordStartTime = Date.now();
+
+              btnRecordToggle.disabled = false;
+              btnRecordToggle.classList.add('recording');
+              recordDot.style.background = '#F87171';
+              recordText.innerText = 'DETENER';
+
+              tabStage1.disabled = true;
+              tabStage2.disabled = true;
+              tabStage3.disabled = true;
+
+              statusIndicator.innerHTML = `• En vivo en <strong>${sessionId.toUpperCase()}</strong> (IA Transcribiendo en tiempo real 🟢)`;
+              captionLive.innerText = 'Escuchando al orador... Hablá normalmente.';
+              return;
+            }
+
+            if (payload.sessionResumptionUpdate?.newHandle) {
+              sessionHandle = payload.sessionResumptionUpdate.newHandle;
+            } else if (payload.sessionHandle) {
+              sessionHandle = payload.sessionHandle;
+            }
+
+            const serverContent = payload.serverContent;
+            if (!serverContent) return;
+
+            // 1. Transcripción Provisional (interim)
+            if (serverContent.interimInputTranscription && serverContent.interimInputTranscription.text) {
+              const interimText = serverContent.interimInputTranscription.text;
+              originalPartial = interimText;
+              streamerLive.streamTo(interimText);
+
+              // Publicar a Firebase RTDB para la audiencia en modo original
+              db.ref(`liveSessions/${sessionId}/current`).set({
+                partialText: interimText,
+                updatedAt: Date.now()
+              });
+            }
+
+            // 2. Transcripción Definitiva (final)
+            if (serverContent.inputTranscription && serverContent.inputTranscription.text) {
+              const finalText = serverContent.inputTranscription.text.trim();
+              if (finalText) {
+                sequenceCounter++;
+                const currentSeq = sequenceCounter;
+                const segId = `seg_${Date.now()}_${currentSeq}`;
+
+                originalFinal = finalText;
+                originalPartial = '';
+                streamerLive.setCommittedLine(finalText);
+                streamerLive.streamTo(finalText);
+
+                // Publicar segmento final a Firebase RTDB
+                db.ref(`liveSessions/${sessionId}/lastFinal`).set({
+                  text: finalText,
+                  sequence: currentSeq,
+                  segmentId: segId,
+                  updatedAt: Date.now()
                 });
-              }
-            } else if (msg.type === 'translation') {
-              const trEs = msg.data.es || '';
-              const trEn = msg.data.en || '';
-              const trPt = msg.data.pt || '';
 
-              if (trEs && trEs !== spanishFinal) {
-                previousSpanishFinal = spanishFinal;
-                spanishFinal = trEs;
-              }
-              if (trEn && trEn !== englishFinal) {
-                previousEnglishFinal = englishFinal;
-                englishFinal = trEn;
-              }
-              if (trPt && trPt !== portugueseFinal) {
-                previousPortugueseFinal = portugueseFinal;
-                portugueseFinal = trPt;
-              }
+                // Limpiar parcial en RTDB
+                db.ref(`liveSessions/${sessionId}/current`).set({
+                  partialText: '',
+                  updatedAt: Date.now()
+                });
 
-              if (sessionHistory.length > 0) {
-                const last = sessionHistory[sessionHistory.length - 1];
-                if (trEs) last.es = trEs;
-                if (trEn) last.en = trEn;
-                if (trPt) last.pt = trPt;
+                // Guardar en historial local para descarga de SRT
+                const histEntry = {
+                  time: new Date(),
+                  seq: currentSeq,
+                  original: finalText,
+                  es: finalText,
+                  en: finalText,
+                  pt: finalText
+                };
+                sessionHistory.push(histEntry);
+
+                // Publicación instantánea (0ms) para el idioma nativo del orador
+                const detected = detectLanguageSimple(finalText);
+                const immediateTr = {};
+                if (detected === 'es') immediateTr.es = { text: finalText, segmentId: segId };
+                if (detected === 'en') immediateTr.en = { text: finalText, segmentId: segId };
+                if (detected === 'pt') immediateTr.pt = { text: finalText, segmentId: segId };
+                if (Object.keys(immediateTr).length > 0) {
+                  db.ref(`liveSessions/${sessionId}/translations`).update(immediateTr);
+                }
+
+                // Traducir asincrónicamente para la audiencia en los otros idiomas
+                translateAuto(finalText).then(tr => {
+                  db.ref(`liveSessions/${sessionId}/translations`).set({
+                    es: { text: tr.es, segmentId: segId },
+                    en: { text: tr.en, segmentId: segId },
+                    pt: { text: tr.pt, segmentId: segId },
+                    sequence: currentSeq
+                  });
+                  histEntry.es = tr.es;
+                  histEntry.en = tr.en;
+                  histEntry.pt = tr.pt;
+                }).catch(err => console.warn('[Translate] Error:', err));
               }
-              renderCaptions();
-            } else if (msg.type === 'gemini_status') {
-              if (msg.status === 'connected') {
-                statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Gemini Live Conectado 🟢)`;
-              } else if (msg.status === 'quota_error') {
-                statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Reconectando por cuota de API...)`;
-              }
-            } else if (msg.type === 'session_reset') {
-              console.log('[Broadcast] Sesión reseteada por el backend.');
             }
-          } catch (e) {}
-        };
-
-        ws.onclose = () => {
-          if (isBroadcasting) {
-            stopBroadcast('Conexión perdida con el backend local (ws://localhost:8090)');
+          } catch (err) {
+            console.error('Error procesando respuesta de Gemini:', err);
           }
         };
 
-        ws.onerror = (err) => {
-          console.error('Error WebSocket:', err);
-          if (connectTimeout) clearTimeout(connectTimeout);
-          stopBroadcast('Error conectando a ws://localhost:8090. Asegurate de que el backend esté corriendo');
+        geminiWs.onclose = (event) => {
+          console.warn('[GeminiLive] WS cerrado:', event.code, event.reason);
+          if (isBroadcasting) {
+            if (event.code === 1011) {
+              stopBroadcast('Límite de cuota temporal de la API alcanzado');
+            } else {
+              stopBroadcast('Conexión con el servicio de IA finalizada');
+            }
+          }
+        };
+
+        geminiWs.onerror = (err) => {
+          console.error('[GeminiLive] WS error:', err);
+          if (isBroadcasting) {
+            stopBroadcast('Error de conexión con Gemini Live');
+          }
         };
 
       } catch (err) {
         console.error('Error al iniciar transmisión:', err);
-        alert(`Error al iniciar transmisión: ${err.message}`);
+        alert(`Error al acceder al micrófono: ${err.message}\n\nAsegurate de permitir el acceso al micrófono en el navegador.`);
         stopBroadcast(`Error: ${err.message}`);
       }
     }
 
+    function startMicMeterLoop() {
+      if (micAnimId) cancelAnimationFrame(micAnimId);
+      function loop() {
+        if (!isBroadcasting || !analyserNode) {
+          if (micMeterFill) micMeterFill.style.width = '0%';
+          return;
+        }
+        const data = new Uint8Array(analyserNode.frequencyBinCount);
+        analyserNode.getByteFrequencyData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) {
+          sum += data[i];
+        }
+        const avg = sum / data.length;
+        const pct = Math.min(100, Math.round((avg / 64) * 100));
+        if (micMeterFill) micMeterFill.style.width = `${pct}%`;
+        micAnimId = requestAnimationFrame(loop);
+      }
+      micAnimId = requestAnimationFrame(loop);
+    }
+
     function stopBroadcast(errorReason) {
-      if (connectTimeout) clearTimeout(connectTimeout);
       const wasBroadcasting = isBroadcasting;
       isBroadcasting = false;
+      isSetupComplete = false;
 
       if (micAnimId) {
         cancelAnimationFrame(micAnimId);
@@ -738,14 +780,9 @@
         micMeterFill.style.width = '0%';
       }
 
-      if (ws) {
-        try {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ action: 'stop' }));
-          }
-          ws.close();
-        } catch (e) {}
-        ws = null;
+      if (geminiWs) {
+        try { geminiWs.close(); } catch (e) {}
+        geminiWs = null;
       }
 
       if (mediaStream) {
@@ -756,6 +793,11 @@
         try { audioContext.close(); } catch (e) {}
         audioContext = null;
       }
+
+      // Notificar a Firebase RTDB que la sesión se detuvo
+      try {
+        db.ref(`liveSessions/${sessionId}/status`).set('stopped');
+      } catch (e) {}
 
       btnRecordToggle.disabled = false;
       btnRecordToggle.classList.remove('recording');
@@ -769,10 +811,9 @@
       if (errorReason) {
         statusIndicator.innerHTML = `<span style="color:#F87171; font-weight:700;">⚠️ ${errorReason}</span> • Presioná RECORD para reanudar.`;
       } else {
-        statusIndicator.innerHTML = '<span style="color:#34D399; font-weight:700;">✔ Grabación empaquetada y archivada</span> • Lista para ser descartada al pulsar RECORD.';
+        statusIndicator.innerHTML = '<span style="color:#34D399; font-weight:700;">✔ Grabación empaquetada</span> • Lista para ser descartada al pulsar RECORD.';
       }
 
-      // Empaquetar y cerrar el bloque anterior si hubo grabación exitosa
       if (!errorReason && (wasBroadcasting || sessionHistory.length > 0)) {
         showPackagedBlock();
       }
@@ -802,9 +843,6 @@
       if (resetCaptions) {
         originalPartial = '';
         originalFinal = '';
-        spanishFinal = '';
-        englishFinal = '';
-        portugueseFinal = '';
         streamerLive.previousCommitted = '';
         streamerLive.lastRawText = '';
         captionTop.innerText = '';
@@ -815,12 +853,12 @@
 
     function downloadBroadcastSrt() {
       const validItems = sessionHistory.filter(item => {
-        const t = (item[currentMode] || item.original || '').trim();
+        const t = (item.original || '').trim();
         return t.length > 0;
       });
 
       if (validItems.length === 0) {
-        alert('No hay subtítulos grabados en este bloque para exportar. Asegurate de que el orador haya hablado durante la grabación.');
+        alert('No hay subtítulos grabados en este bloque para exportar. Asegurate de haber hablado durante la grabación.');
         return;
       }
       let content = "";
@@ -837,20 +875,19 @@
           return `${hrs}:${mins}:${secs},000`;
         }
 
-        const text = (item[currentMode] || item.original || '').trim();
+        const text = item.original.trim();
         content += `${idx + 1}\n${formatSrtTime(startSec)} --> ${formatSrtTime(endSec)}\n${text}\n\n`;
       });
 
       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `nerdearla-${sessionId}-${currentMode}.srt`;
+      a.download = `nerdearla-${sessionId}-transcripcion.srt`;
       a.click();
     }
 
     // Funciones del Modal de QR
     function openQrModal() {
-      // Usar host público si está disponible, o actual
       const baseUrl = window.location.hostname.includes('web.app') 
         ? 'https://voicy-ai.web.app' 
         : `${window.location.protocol}//${window.location.host}`;

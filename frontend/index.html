@@ -421,6 +421,8 @@
           } else {
             streamerAudience.streamTo(activeTranslation);
           }
+        } else if (originalPartial || originalFinal) {
+          streamerAudience.streamTo(originalPartial || originalFinal);
         } else {
           const placeholderMsg = 'Traduciendo al ' + (currentMode === 'en' ? 'inglés' : currentMode === 'pt' ? 'portugués' : 'español') + '...';
           streamerAudience.renderDirect('', placeholderMsg);
