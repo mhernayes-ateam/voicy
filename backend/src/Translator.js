@@ -13,7 +13,6 @@
 export class Translator {
   constructor(apiKey) {
     this.apiKey = apiKey || process.env.GEMINI_API_KEY;
-    this.isTranslating = false;
     this.cache = new Map();
   }
 
@@ -24,81 +23,64 @@ export class Translator {
 
     const trimmed = text.trim();
 
-    // Cache hit
+    // Cache hit inmediato
     if (this.cache.has(trimmed)) {
       return this.cache.get(trimmed);
     }
 
     if (!this.apiKey) {
-      const fallback = {
-        es: trimmed,
-        en: trimmed,
-        pt: trimmed,
-        text: trimmed
-      };
+      const fallback = { es: trimmed, en: trimmed, pt: trimmed, text: trimmed };
       return fallback;
     }
 
-    // Esperar si hay una traducción activa (cola de 1 en vuelo para prevenir 503)
-    let attempts = 0;
-    while (this.isTranslating && attempts < 10) {
-      await new Promise(r => setTimeout(r, 60));
-      attempts++;
-    }
-
-    this.isTranslating = true;
-
     try {
-      const prompt = `You are an expert conference interpreter for Nerdearla.
-Task: Translate the given input speech into Spanish (es), English (en), and Portuguese (pt).
-Strictly preserve technical terms, software libraries, product names, code keywords, and brands (e.g. Kubernetes, Gemini, React, Docker, Nerdearla, Voicy, Cloud Run, Python) verbatim.
-Return ONLY valid JSON with keys "es", "en", "pt":
+      // Prompt bidireccional ultrarrápido según plan.md 4.5
+      // Detecta si es español o inglés y traduce al opuesto
+      const prompt = `You are a simultaneous conference interpreter.
+Detect if the text is Spanish or English. If English, translate to Latin American Spanish. If Spanish, translate to English.
+Preserve technical terms and brands (e.g. Kubernetes, React, Gemini, Nerdearla, Docker, Cloud Run) verbatim.
+Return ONLY valid JSON:
+{"source":"en"|"es","translation":"<translated text>"}
 Input: "${trimmed}"`;
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${this.apiKey}`;
 
-      let result = null;
-      for (let retry = 0; retry < 2; retry++) {
-        try {
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: {
-                responseMimeType: 'application/json',
-                maxOutputTokens: 250,
-                temperature: 0.1
-              }
-            })
-          });
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 3500);
 
-          if (res.ok) {
-            const data = await res.json();
-            const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-            const parsed = JSON.parse(raw);
-            result = {
-              es: parsed.es || trimmed,
-              en: parsed.en || trimmed,
-              pt: parsed.pt || trimmed,
-              text: parsed.es || trimmed
-            };
-            break;
-          } else {
-            await new Promise(r => setTimeout(r, 200));
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 120,
+            temperature: 0.1
           }
-        } catch (netErr) {
-          await new Promise(r => setTimeout(r, 200));
-        }
+        }),
+        signal: ctrl.signal
+      });
+      clearTimeout(timer);
+
+      let result = null;
+      if (res.ok) {
+        const data = await res.json();
+        const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+        const parsed = JSON.parse(raw);
+        const isEnglish = parsed.source === 'en';
+        result = {
+          es: isEnglish ? parsed.translation : trimmed,
+          en: isEnglish ? trimmed : parsed.translation,
+          pt: parsed.translation,
+          text: parsed.translation || trimmed,
+          sourceLang: parsed.source || 'auto',
+          targetLang: isEnglish ? 'es' : 'en'
+        };
       }
 
       if (!result) {
-        result = {
-          es: trimmed,
-          en: trimmed,
-          pt: trimmed,
-          text: trimmed
-        };
+        result = { es: trimmed, en: trimmed, pt: trimmed, text: trimmed };
       }
 
       // Guardar en cache (máx 150 elementos)
@@ -109,8 +91,9 @@ Input: "${trimmed}"`;
       this.cache.set(trimmed, result);
 
       return result;
-    } finally {
-      this.isTranslating = false;
+    } catch (err) {
+      const fallback = { es: trimmed, en: trimmed, pt: trimmed, text: trimmed };
+      return fallback;
     }
   }
 }

@@ -108,8 +108,8 @@ export class GeminiConnectionManager {
           responseModalities: ['TEXT']
         },
         inputAudioTranscription: {
-          languageCodes: ['en', 'es'], // Bilingüe EN / ES
-          mode: 'SMART',               // Subtítulos limpios sin muletillas
+          languageCodes: [], // Auto-detección multi-idioma continua según plan.md 4.2
+          mode: 'SMART',     // Subtítulos limpios sin muletillas
           customVocabulary: this.customVocabulary
         }
       }
