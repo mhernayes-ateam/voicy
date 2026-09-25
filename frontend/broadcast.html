@@ -411,12 +411,23 @@
       }
     }
 
+    let connectTimeout = null;
+
     function getWsUrl() {
+      // 1. Si se especificó ?backend=... en la URL
+      const customBackend = urlParams.get('backend');
+      if (customBackend) {
+        return customBackend.startsWith('ws') ? customBackend : `ws://${customBackend}/ws/broadcast/${sessionId}`;
+      }
+
+      // 2. Si estamos en localhost o 127.0.0.1
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         return `ws://localhost:8090/ws/broadcast/${sessionId}`;
       }
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      return `${protocol}//${window.location.host}/ws/broadcast/${sessionId}`;
+
+      // 3. Si se accede desde Firebase Hosting o IP de red:
+      // Conectar a la máquina del orador donde corre el backend local de captura
+      return `ws://localhost:8090/ws/broadcast/${sessionId}`;
     }
 
     async function toggleBroadcast() {
@@ -431,57 +442,78 @@
       try {
         btnRecordToggle.disabled = true;
         recordText.innerText = 'CONECTANDO...';
-        statusIndicator.innerText = `Conectando con Gemini para ${sessionId.toUpperCase()}...`;
+        statusIndicator.innerText = `Conectando con servidor de audio para ${sessionId.toUpperCase()}...`;
 
         const wsUrl = getWsUrl();
+
+        if (connectTimeout) clearTimeout(connectTimeout);
+        connectTimeout = setTimeout(() => {
+          if (!isBroadcasting) {
+            console.warn('Timeout conectando WebSocket');
+            statusIndicator.innerText = 'Tiempo de espera agotado. Verificá que el servidor esté activo en http://localhost:8090';
+            stopBroadcast();
+          }
+        }, 6000);
+
         ws = new WebSocket(wsUrl);
         ws.binaryType = 'arraybuffer';
 
         ws.onopen = async () => {
-          audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          await audioContext.audioWorklet.addModule('/worklets/pcm-processor.js');
-
-          let sourceNode = null;
-
-          if (selAudioSource.value === 'sample') {
-            const audioElem = new Audio('/samples/nerdearla-sample.wav');
-            audioElem.loop = true;
-            await audioElem.play().catch(() => {});
-            sourceNode = audioContext.createMediaElementSource(audioElem);
-            sampleSourceNode = audioElem;
-          } else {
-            mediaStream = await navigator.mediaDevices.getUserMedia({
-              audio: {
-                channelCount: 1,
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true
-              }
-            });
-            sourceNode = audioContext.createMediaStreamSource(mediaStream);
-          }
-
-          workletNode = new AudioWorkletNode(audioContext, 'streaming-pcm-resampler');
-
-          workletNode.port.onmessage = (event) => {
-            if (isBroadcasting && ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(event.data.buffer);
+          if (connectTimeout) clearTimeout(connectTimeout);
+          try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioContext.state === 'suspended') {
+              await audioContext.resume();
             }
-          };
 
-          sourceNode.connect(workletNode);
+            await audioContext.audioWorklet.addModule('/worklets/pcm-processor.js');
 
-          isBroadcasting = true;
-          btnRecordToggle.disabled = false;
-          btnRecordToggle.classList.add('recording');
-          recordDot.style.background = '#F87171';
-          recordText.innerText = 'DETENER';
-          selAudioSource.disabled = true;
-          tabStage1.disabled = true;
-          tabStage2.disabled = true;
-          tabStage3.disabled = true;
-          statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Gemini Activo)`;
-          renderCaptions();
+            let sourceNode = null;
+
+            if (selAudioSource.value === 'sample') {
+              const audioElem = new Audio('/samples/nerdearla-sample.wav');
+              audioElem.loop = true;
+              await audioElem.play().catch(() => {});
+              sourceNode = audioContext.createMediaElementSource(audioElem);
+              sampleSourceNode = audioElem;
+            } else {
+              mediaStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                  channelCount: 1,
+                  echoCancellation: true,
+                  noiseSuppression: true,
+                  autoGainControl: true
+                }
+              });
+              sourceNode = audioContext.createMediaStreamSource(mediaStream);
+            }
+
+            workletNode = new AudioWorkletNode(audioContext, 'streaming-pcm-resampler');
+
+            workletNode.port.onmessage = (event) => {
+              if (isBroadcasting && ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(event.data.buffer);
+              }
+            };
+
+            sourceNode.connect(workletNode);
+
+            isBroadcasting = true;
+            btnRecordToggle.disabled = false;
+            btnRecordToggle.classList.add('recording');
+            recordDot.style.background = '#F87171';
+            recordText.innerText = 'DETENER';
+            selAudioSource.disabled = true;
+            tabStage1.disabled = true;
+            tabStage2.disabled = true;
+            tabStage3.disabled = true;
+            statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Transmitiendo audio)`;
+            renderCaptions();
+          } catch (err) {
+            console.error('Error al inicializar captura de audio:', err);
+            alert(`Error al acceder al micrófono o audio: ${err.message}\n\nAsegurate de permitir el acceso al micrófono en el navegador.`);
+            stopBroadcast();
+          }
         };
 
         ws.onmessage = (event) => {
@@ -501,7 +533,7 @@
               renderCaptions();
             } else if (msg.type === 'gemini_status') {
               if (msg.status === 'connected') {
-                statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Gemini Live Activo)`;
+                statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Gemini Live Conectado)`;
               }
             }
           } catch (e) {}
@@ -513,29 +545,31 @@
 
         ws.onerror = (err) => {
           console.error('Error WebSocket:', err);
-          statusIndicator.innerText = 'Error de conexión';
+          if (connectTimeout) clearTimeout(connectTimeout);
+          statusIndicator.innerText = 'Error de conexión. Asegurate de que el backend esté corriendo en http://localhost:8090';
           stopBroadcast();
         };
 
       } catch (err) {
         console.error('Error al iniciar transmisión:', err);
-        alert(`Error al iniciar micrófono: ${err.message}`);
+        alert(`Error al iniciar transmisión: ${err.message}`);
         stopBroadcast();
       }
     }
 
     function stopBroadcast() {
+      if (connectTimeout) clearTimeout(connectTimeout);
       isBroadcasting = false;
       if (ws) {
         try { ws.close(); } catch (e) {}
         ws = null;
       }
       if (sampleSourceNode) {
-        sampleSourceNode.pause();
+        try { sampleSourceNode.pause(); } catch (e) {}
         sampleSourceNode = null;
       }
       if (mediaStream) {
-        mediaStream.getTracks().forEach(t => t.stop());
+        try { mediaStream.getTracks().forEach(t => t.stop()); } catch (e) {}
         mediaStream = null;
       }
       if (audioContext) {
