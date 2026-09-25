@@ -55,11 +55,10 @@ body {
   justify-content: space-between;
   padding: 18px 28px;
   border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(9, 11, 16, 0.85);
+  background: rgba(9, 11, 16, 0.96);
 }
 
 .brand-logo {
@@ -204,7 +203,6 @@ body {
   border-radius: var(--radius-lg);
   padding: 24px;
   margin-bottom: 24px;
-  backdrop-filter: blur(16px);
 }
 
 .vu-meter-bar {
