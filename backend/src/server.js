@@ -8,6 +8,14 @@ import { SessionManager } from './SessionManager.js';
 
 dotenv.config();
 
+process.on('uncaughtException', (err) => {
+  console.error('[Process] Excepción capturada (previene crash):', err.message);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Process] Rechazo no manejado capturado:', reason);
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const FRONTEND_DIR = path.resolve(__dirname, '../../frontend');

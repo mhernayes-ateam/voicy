@@ -228,10 +228,15 @@ export class GeminiConnectionManager {
     }
     if (this.ws) {
       try {
-        this.ws.removeAllListeners();
-        this.ws.close();
+        const socket = this.ws;
+        this.ws = null;
+        socket.on('error', () => {}); // Prevenir crash de Node si se cierra durante handshake
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.close();
+        } else {
+          socket.terminate();
+        }
       } catch (e) {}
-      this.ws = null;
     }
   }
 }
