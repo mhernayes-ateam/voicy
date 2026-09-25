@@ -2,7 +2,7 @@
 ### Transcripción y Traducción Simultánea a Escala para Conferencias
 > Proyecto construido para la **Nerdearla Vibeathon 2026** (24 y 25 de septiembre, 2026).  
 > Licencia: **MIT (Open Source Initiative)**  
-> 📖 **[Documentación Técnica Completa en HTML](https://voicy-3fca6.web.app/docs)** (`frontend/docs.html`)
+> 📖 **[Documentación Técnica Completa en HTML](https://voicy-ai.web.app/docs)** (`frontend/docs.html`)
 
 ---
 

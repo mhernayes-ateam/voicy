@@ -585,7 +585,7 @@
 
     // Modal QR — pre-fetch de la imagen al cargar para que abra instantáneo
     const _baseUrl = window.location.hostname.includes('web.app')
-      ? 'https://voicy-3fca6.web.app'
+      ? 'https://voicy-ai.web.app'
       : `${window.location.protocol}//${window.location.host}`;
     const _audienceUrl = `${_baseUrl}/?session=${sessionId}`;
     const _qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=8&data=${encodeURIComponent(_audienceUrl)}`;

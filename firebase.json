@@ -1,72 +1,144 @@
 {
-  "hosting": {
-    "public": "frontend",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "cleanUrls": true,
-    "trailingSlash": false,
-    "redirects": [
-      {
-        "source": "/audience.html",
-        "destination": "/",
-        "type": 301
-      },
-      {
-        "source": "/audience.html?session=:session",
-        "destination": "/?session=:session",
-        "type": 301
-      }
-    ],
-    "rewrites": [
-      {
-        "source": "/broadcast",
-        "destination": "/broadcast.html"
-      },
-      {
-        "source": "/broadcast/**",
-        "destination": "/broadcast.html"
-      },
-      {
-        "source": "/overlay",
-        "destination": "/overlay.html"
-      },
-      {
-        "source": "/overlay/**",
-        "destination": "/overlay.html"
-      },
-      {
-        "source": "/monitor",
-        "destination": "/monitor.html"
-      },
-      {
-        "source": "/monitor/**",
-        "destination": "/monitor.html"
-      },
-      {
-        "source": "/docs",
-        "destination": "/docs.html"
-      },
-      {
-        "source": "/docs/**",
-        "destination": "/docs.html"
-      },
-      {
-        "source": "/session/**",
-        "destination": "/index.html"
-      },
-      {
-        "source": "/audience/**",
-        "destination": "/index.html"
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  },
+  "hosting": [
+    {
+      "site": "voicy-ai",
+      "public": "frontend",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "cleanUrls": true,
+      "trailingSlash": false,
+      "redirects": [
+        {
+          "source": "/audience.html",
+          "destination": "/",
+          "type": 301
+        },
+        {
+          "source": "/audience.html?session=:session",
+          "destination": "/?session=:session",
+          "type": 301
+        }
+      ],
+      "rewrites": [
+        {
+          "source": "/broadcast",
+          "destination": "/broadcast.html"
+        },
+        {
+          "source": "/broadcast/**",
+          "destination": "/broadcast.html"
+        },
+        {
+          "source": "/overlay",
+          "destination": "/overlay.html"
+        },
+        {
+          "source": "/overlay/**",
+          "destination": "/overlay.html"
+        },
+        {
+          "source": "/monitor",
+          "destination": "/monitor.html"
+        },
+        {
+          "source": "/monitor/**",
+          "destination": "/monitor.html"
+        },
+        {
+          "source": "/docs",
+          "destination": "/docs.html"
+        },
+        {
+          "source": "/docs/**",
+          "destination": "/docs.html"
+        },
+        {
+          "source": "/session/**",
+          "destination": "/index.html"
+        },
+        {
+          "source": "/audience/**",
+          "destination": "/index.html"
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    {
+      "site": "voicy-3fca6",
+      "public": "frontend",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "cleanUrls": true,
+      "trailingSlash": false,
+      "redirects": [
+        {
+          "source": "/audience.html",
+          "destination": "/",
+          "type": 301
+        },
+        {
+          "source": "/audience.html?session=:session",
+          "destination": "/?session=:session",
+          "type": 301
+        }
+      ],
+      "rewrites": [
+        {
+          "source": "/broadcast",
+          "destination": "/broadcast.html"
+        },
+        {
+          "source": "/broadcast/**",
+          "destination": "/broadcast.html"
+        },
+        {
+          "source": "/overlay",
+          "destination": "/overlay.html"
+        },
+        {
+          "source": "/overlay/**",
+          "destination": "/overlay.html"
+        },
+        {
+          "source": "/monitor",
+          "destination": "/monitor.html"
+        },
+        {
+          "source": "/monitor/**",
+          "destination": "/monitor.html"
+        },
+        {
+          "source": "/docs",
+          "destination": "/docs.html"
+        },
+        {
+          "source": "/docs/**",
+          "destination": "/docs.html"
+        },
+        {
+          "source": "/session/**",
+          "destination": "/index.html"
+        },
+        {
+          "source": "/audience/**",
+          "destination": "/index.html"
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ],
   "database": {
     "rules": "database.rules.json"
   },
