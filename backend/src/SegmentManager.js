@@ -41,13 +41,25 @@ export class SegmentManager {
       updatedAt: Date.now()
     });
 
-    // Auto-finalizar tras 1.5s de pausa natural en la voz si Gemini no envió final aún
+    const words = text.trim().split(/\s+/).filter(Boolean);
+    const elapsedSinceStart = Date.now() - this.segmentStartTime;
+
+    // Chunking progresivo estilo YouTube Live CC:
+    // Si la frase supera 8 palabras o pasaron más de 3.5 segundos continuos,
+    // consolidar y disparar traducción para mantener flujo vivo y evitar bloqueos
+    if (words.length >= 8 || elapsedSinceStart > 3500) {
+      if (this.silenceFinalizeTimer) clearTimeout(this.silenceFinalizeTimer);
+      this.handleFinal(text.trim());
+      return;
+    }
+
+    // Auto-finalizar tras 1.0s de pausa natural en la voz si Gemini no envió final aún
     if (this.silenceFinalizeTimer) clearTimeout(this.silenceFinalizeTimer);
     this.silenceFinalizeTimer = setTimeout(() => {
       if (this.currentPartialText && this.currentPartialText.trim().length > 0) {
         this.handleFinal(this.currentPartialText.trim());
       }
-    }, 1500);
+    }, 1000);
   }
 
   handleFinal(finalText) {

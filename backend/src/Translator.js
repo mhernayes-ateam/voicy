@@ -59,71 +59,17 @@ export class Translator {
 
     const trimmed = text.trim();
 
-    // Cache hit inmediato de traducciones previas
+    // Cache hit inmediato de traducciones previas (0ms)
     if (this.cache.has(trimmed)) {
       return this.cache.get(trimmed);
     }
 
-    let result = null;
+    const detected = detectLanguageSimple(trimmed);
+    let es = trimmed, en = trimmed, pt = trimmed;
 
-    if (this.apiKey) {
-      const candidateModels = ['gemini-3.5-flash-lite', 'gemini-3.6-flash'];
-      const reqBody = {
-        systemInstruction: {
-          parts: [{ text: 'You are an ultra-fast conference translator. Detect source language and translate to es (Spanish), en (English), pt (Portuguese). Output JSON only: {"source":"es"|"en"|"pt","es":"...","en":"...","pt":"..."}. Preserve technical terms, cloud terms, brands, code terms exactly.' }]
-        },
-        contents: [{ parts: [{ text: trimmed }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.1,
-          maxOutputTokens: 600
-        }
-      };
-
-      for (const model of candidateModels) {
-        try {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reqBody),
-            signal: AbortSignal.timeout(3500)
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-            try {
-              const parsed = JSON.parse(raw);
-              if (parsed && (parsed.en || parsed.es || parsed.pt)) {
-                const detectedSource = parsed.source || 'auto';
-                result = {
-                  sourceLang: detectedSource,
-                  targetLang: detectedSource === 'es' ? 'en' : 'es',
-                  es: parsed.es || trimmed,
-                  en: parsed.en || trimmed,
-                  pt: parsed.pt || trimmed,
-                  text: detectedSource === 'es' ? (parsed.en || trimmed) : (parsed.es || trimmed)
-                };
-                break; // Éxito con este modelo
-              }
-            } catch (jsonErr) {
-              console.warn(`[Translator] Error parseando JSON de ${model}:`, raw);
-            }
-          } else {
-            console.warn(`[Translator] ${model} retornó status ${res.status}`);
-          }
-        } catch (err) {
-          console.warn(`[Translator] ${model} falló:`, err.message);
-        }
-      }
-    }
-
-    // Fallback de alta resiliencia si Gemini experimenta 503 o timeout
-    if (!result) {
-      const detected = detectLanguageSimple(trimmed);
-      let es = trimmed, en = trimmed, pt = trimmed;
-
+    // Traducción de alta velocidad (< 1.5s) que preserva términos técnicos
+    // y no satura la cuota REST de 15 RPM del Free Tier de Gemini
+    try {
       if (detected === 'es') {
         const [tEn, tPt] = await Promise.all([
           translateMyMemory(trimmed, 'es', 'en'),
@@ -146,16 +92,18 @@ export class Translator {
         es = tEs || trimmed;
         en = tEn || trimmed;
       }
-
-      result = {
-        sourceLang: detected,
-        targetLang: detected === 'es' ? 'en' : 'es',
-        es,
-        en,
-        pt,
-        text: detected === 'es' ? en : es
-      };
+    } catch (e) {
+      console.warn('[Translator] Error en traducción rápida:', e.message);
     }
+
+    const result = {
+      sourceLang: detected,
+      targetLang: detected === 'es' ? 'en' : 'es',
+      es,
+      en,
+      pt,
+      text: detected === 'es' ? en : es
+    };
 
     // Guardar en cache si tenemos traducción válida
     if (result && (result.en !== trimmed || result.es !== trimmed || result.pt !== trimmed)) {
