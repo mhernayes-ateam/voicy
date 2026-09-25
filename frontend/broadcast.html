@@ -407,7 +407,13 @@
 
         if (this.displayedCount > this.targetWords.length ||
             (this.displayedCount > 0 && this.targetWords[0] !== words[0])) {
-          this.displayedCount = Math.min(this.targetWords.length, 1);
+          this.displayedCount = 0;
+        }
+
+        // Mostrar la primera palabra nueva inmediatamente (sin esperar el tick del timer)
+        if (this.displayedCount < this.targetWords.length) {
+          this.displayedCount++;
+          this.render(this.targetWords.slice(0, this.displayedCount));
         }
 
         this.timer = setInterval(() => {
@@ -417,9 +423,8 @@
           } else {
             clearInterval(this.timer);
             this.timer = null;
-            this.render(this.targetWords);
           }
-        }, 40);
+        }, 22);
       }
     }
 
