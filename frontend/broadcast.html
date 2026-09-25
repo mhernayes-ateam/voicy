@@ -207,11 +207,12 @@
       <span id="statusIndicator">Listo para transmitir</span>
     </div>
 
-    <!-- Pantalla Principal de Texto en Tiempo Real (Ventana rodante de máximo 2 líneas) -->
+    <!-- Pantalla Principal de Texto en Tiempo Real: 2 Filas Visibles Estrictas -->
     <div class="audience-captions" id="captionsContainer">
-      <div class="caption-viewport">
-        <div>
-          <span id="captionLive" class="live-phrase">Presioná RECORD para comenzar a hablar...</span>
+      <div class="caption-viewport-2rows">
+        <div id="captionRow1" class="caption-row caption-row-1">🎙️ Nerdearla 2026 • Transcripción en Vivo</div>
+        <div id="captionRow2" class="caption-row caption-row-2">
+          <span id="captionLive" class="live-phrase">Presioná RECORD para comenzar...</span>
           <span class="cursor-blink"></span>
         </div>
       </div>
@@ -263,7 +264,7 @@
     const tabStage1 = document.getElementById('tabStage1');
     const tabStage2 = document.getElementById('tabStage2');
     const tabStage3 = document.getElementById('tabStage3');
-    const captionFinal = document.getElementById('captionFinal');
+    const captionRow1 = document.getElementById('captionRow1');
     const captionLive = document.getElementById('captionLive');
     const btnRecordToggle = document.getElementById('btnRecordToggle');
     const recordDot = document.getElementById('recordDot');
@@ -316,6 +317,7 @@
       spanishFinal = '';
       englishFinal = '';
       portugueseFinal = '';
+      streamerLive.previousLine = '';
       renderCaptions();
     }
 
@@ -328,46 +330,65 @@
       renderCaptions();
     }
 
-    class WordStreamer {
-      constructor(element, maxChars = 52, maxWords = 8) {
-        this.element = element;
-        this.maxChars = maxChars;
-        this.maxWords = maxWords;
-        this.displayed = [];
-        this.target = [];
+    class TwoRowStreamer {
+      constructor(row1El, row2El, defaultRow1 = '🎙️ Nerdearla 2026 • Transcripción en Vivo', defaultRow2 = 'Presioná RECORD para comenzar...') {
+        this.row1El = row1El;
+        this.row2El = row2El;
+        this.defaultRow1 = defaultRow1;
+        this.defaultRow2 = defaultRow2;
+        this.previousLine = '';
+        this.lastRawText = '';
+        this.displayedCount = 0;
+        this.targetWords = [];
         this.timer = null;
-        this.lastFullText = '';
       }
 
-      getVisibleText() {
-        let words = [...this.displayed];
-        // Descartar palabras más antiguas hasta que queden como máximo 8 palabras y 52 caracteres (estrictamente 2 líneas)
-        while (words.length > this.maxWords || (words.length > 2 && words.join(' ').length > this.maxChars)) {
-          words.shift();
+      setPreviousLine(text) {
+        if (!text || !text.trim()) return;
+        const words = text.trim().split(/\s+/).filter(Boolean);
+        if (words.length > 0) {
+          this.previousLine = words.slice(-6).join(' ');
         }
-        return words.join(' ');
+      }
+
+      renderTwoRows(words) {
+        if (!words || words.length === 0) {
+          this.row1El.innerText = this.previousLine || this.defaultRow1;
+          this.row2El.innerText = isBroadcasting ? 'Escuchando al orador...' : this.defaultRow2;
+          return;
+        }
+
+        if (words.length <= 4) {
+          this.row1El.innerText = this.previousLine || this.defaultRow1;
+          this.row2El.innerText = words.join(' ');
+        } else {
+          // Repartir equilibradamente entre las 2 filas (máximo 6 palabras por fila = 12 total)
+          const visible = words.slice(-12);
+          const splitIdx = Math.ceil(visible.length / 2);
+          this.row1El.innerText = visible.slice(0, splitIdx).join(' ');
+          this.row2El.innerText = visible.slice(splitIdx).join(' ');
+        }
       }
 
       streamTo(fullText) {
         if (!fullText || !fullText.trim()) {
-          this.element.innerText = '';
-          this.displayed = [];
-          this.target = [];
-          this.lastFullText = '';
+          this.renderTwoRows([]);
+          this.displayedCount = 0;
+          this.targetWords = [];
+          this.lastRawText = '';
           return;
         }
 
         const trimmed = fullText.trim();
-        if (trimmed === this.lastFullText) return;
-        this.lastFullText = trimmed;
+        if (trimmed === this.lastRawText) return;
+        this.lastRawText = trimmed;
 
         const words = trimmed.split(/\s+/).filter(Boolean);
-        this.target = words;
+        this.targetWords = words;
 
-        // Si es una frase diferente, reiniciar buffer para no mezclar oraciones
-        const currentJoined = this.displayed.join(' ');
-        if (this.displayed.length > 0 && !trimmed.startsWith(currentJoined.slice(0, 15))) {
-          this.displayed = [];
+        if (this.displayedCount > this.targetWords.length || 
+            (this.displayedCount > 0 && this.targetWords[0] !== words[0])) {
+          this.displayedCount = Math.min(this.targetWords.length, 1);
         }
 
         if (this.timer) {
@@ -376,20 +397,20 @@
         }
 
         this.timer = setInterval(() => {
-          if (this.displayed.length < this.target.length) {
-            const nextWord = this.target[this.displayed.length];
-            this.displayed.push(nextWord);
-            this.element.innerText = this.getVisibleText();
+          if (this.displayedCount < this.targetWords.length) {
+            this.displayedCount++;
+            const currentSubset = this.targetWords.slice(0, this.displayedCount);
+            this.renderTwoRows(currentSubset);
           } else {
             clearInterval(this.timer);
             this.timer = null;
-            this.element.innerText = this.getVisibleText();
+            this.renderTwoRows(this.targetWords);
           }
-        }, 45); // 45ms por palabra: efecto teletipo fluido y natural
+        }, 40);
       }
     }
 
-    const streamerLive = new WordStreamer(captionLive, 52, 8);
+    const streamerLive = new TwoRowStreamer(captionRow1, captionLive, '🎙️ Nerdearla 2026 • Transcripción en Vivo', 'Presioná RECORD para comenzar...');
 
     function renderCaptions() {
       let activeText = '';
@@ -407,7 +428,7 @@
       if (activeText) {
         streamerLive.streamTo(activeText);
       } else {
-        streamerLive.streamTo(isBroadcasting ? 'Escuchando al orador...' : 'Presioná RECORD para comenzar a hablar...');
+        streamerLive.streamTo(isBroadcasting ? 'Escuchando al orador...' : '');
       }
     }
 
@@ -523,11 +544,15 @@
               originalPartial = msg.data.partialText || '';
               renderCaptions();
             } else if (msg.type === 'final') {
-              originalFinal = msg.data.segment.text || '';
+              const txt = msg.data.segment.text || '';
+              streamerLive.setPreviousLine(txt);
+              originalFinal = txt;
               originalPartial = '';
               renderCaptions();
             } else if (msg.type === 'translation') {
-              spanishFinal = msg.data.es || msg.data.text || '';
+              const trTxt = msg.data.es || msg.data.text || '';
+              streamerLive.setPreviousLine(trTxt);
+              spanishFinal = trTxt;
               englishFinal = msg.data.en || msg.data.text || '';
               portugueseFinal = msg.data.pt || msg.data.text || '';
               renderCaptions();
