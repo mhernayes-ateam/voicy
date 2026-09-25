@@ -275,13 +275,23 @@
     }
 
     class WordStreamer {
-      constructor(element, maxVisibleWords = 11) {
+      constructor(element, maxChars = 52, maxWords = 8) {
         this.element = element;
-        this.maxVisibleWords = maxVisibleWords;
+        this.maxChars = maxChars;
+        this.maxWords = maxWords;
         this.displayed = [];
         this.target = [];
         this.timer = null;
         this.lastFullText = '';
+      }
+
+      getVisibleText() {
+        let words = [...this.displayed];
+        // Descartar palabras más antiguas hasta que queden como máximo 8 palabras y 52 caracteres (estrictamente 2 líneas)
+        while (words.length > this.maxWords || (words.length > 2 && words.join(' ').length > this.maxChars)) {
+          words.shift();
+        }
+        return words.join(' ');
       }
 
       streamTo(fullText) {
@@ -315,27 +325,17 @@
           if (this.displayed.length < this.target.length) {
             const nextWord = this.target[this.displayed.length];
             this.displayed.push(nextWord);
-
-            // Mantener como MÁXIMO 2 LÍNEAS (descartar palabras antiguas del inicio)
-            const visibleWords = this.displayed.length > this.maxVisibleWords
-              ? this.displayed.slice(-this.maxVisibleWords)
-              : this.displayed;
-
-            this.element.innerText = visibleWords.join(' ');
+            this.element.innerText = this.getVisibleText();
           } else {
             clearInterval(this.timer);
             this.timer = null;
-
-            const visibleWords = this.displayed.length > this.maxVisibleWords
-              ? this.displayed.slice(-this.maxVisibleWords)
-              : this.displayed;
-            this.element.innerText = visibleWords.join(' ');
+            this.element.innerText = this.getVisibleText();
           }
         }, 45); // 45ms por palabra: ultra suave y natural
       }
     }
 
-    const streamerAudience = new WordStreamer(captionLive, 11);
+    const streamerAudience = new WordStreamer(captionLive, 52, 8);
 
     function renderCaptions() {
       let activeText = '';

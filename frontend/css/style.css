@@ -280,13 +280,13 @@ body {
 
 .caption-viewport {
   width: 100%;
-  max-width: 680px;
-  max-height: 2.85em; /* Límite estricto: exactamente máximo 2 líneas visibles */
-  overflow: hidden;
+  max-width: 760px;
+  min-height: 2.8em;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
+  overflow: visible; /* Nunca cortar texto por la mitad */
 }
 
 .audience-captions .final-phrase {
@@ -297,7 +297,9 @@ body {
   color: #FFFFFF;
   font-weight: 700;
   display: inline;
-  word-break: break-word;
+  word-break: normal;
+  overflow-wrap: break-word;
+  line-height: 1.4;
 }
 
 .audience-captions .cursor-blink {
