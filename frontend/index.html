@@ -91,6 +91,64 @@
       from { transform: scale(0.9); opacity: 0; }
       to { transform: scale(1); opacity: 1; }
     }
+
+    /* Toast de notificación custom */
+    .voicy-toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #1A1D2E;
+      border: 1px solid rgba(123, 79, 255, 0.4);
+      border-radius: 16px;
+      padding: 14px 18px;
+      min-width: 280px;
+      max-width: 380px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(123,79,255,0.1);
+      transform: translateX(120%);
+      opacity: 0;
+      transition: transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.25s ease;
+      pointer-events: none;
+    }
+    .voicy-toast.show {
+      transform: translateX(0);
+      opacity: 1;
+      pointer-events: all;
+    }
+    .voicy-toast-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .voicy-toast-body {
+      flex: 1;
+    }
+    .voicy-toast-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 2px;
+    }
+    .voicy-toast-msg {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .voicy-toast-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 2px 4px;
+      border-radius: 6px;
+      transition: color 0.15s;
+      flex-shrink: 0;
+    }
+    .voicy-toast-close:hover { color: #fff; }
     .qr-img {
       width: 220px;
       height: 220px;
@@ -548,7 +606,7 @@
     // Exportador de Subtítulos a SRT
     function downloadTranscript(format = 'srt') {
       if (sessionHistory.length === 0) {
-        alert("Aún no hay frases transcritas en esta sesión para exportar.");
+        showToast('⚠️', 'Sin datos', 'Aún no hay frases transcritas en esta sesión para exportar.');
         return;
       }
 
@@ -587,6 +645,27 @@
         document.getElementById('urlsModal').style.display = 'none';
       }
     }
+
+    // Toast de notificación custom (reemplaza alert())
+    let _toastTimer = null;
+    function showToast(icon, title, msg, duration = 4000) {
+      const t = document.getElementById('voicyToast');
+      document.getElementById('toastIcon').innerText = icon;
+      document.getElementById('toastTitle').innerText = title;
+      document.getElementById('toastMsg').innerText = msg;
+      t.classList.add('show');
+      if (_toastTimer) clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => t.classList.remove('show'), duration);
+    }
   </script>
+  <!-- Toast de notificación custom -->
+  <div id="voicyToast" class="voicy-toast">
+    <span id="toastIcon" class="voicy-toast-icon">⚠️</span>
+    <div class="voicy-toast-body">
+      <div id="toastTitle" class="voicy-toast-title">Aviso</div>
+      <div id="toastMsg" class="voicy-toast-msg"></div>
+    </div>
+    <button class="voicy-toast-close" onclick="document.getElementById('voicyToast').classList.remove('show')">×</button>
+  </div>
 </body>
 </html>
