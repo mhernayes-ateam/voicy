@@ -207,11 +207,11 @@
       <span id="statusIndicator">Listo para transmitir</span>
     </div>
 
-    <!-- Pantalla Principal de Texto en Tiempo Real: 2 Filas Visibles Estrictas -->
+    <!-- Pantalla Principal de Subtítulos: 2 Líneas Dinámicas Roll-Up (Estándar Dorado) -->
     <div class="audience-captions" id="captionsContainer">
-      <div class="caption-viewport-2rows">
-        <div id="captionRow1" class="caption-row caption-row-1">🎙️ Nerdearla 2026 • Transcripción en Vivo</div>
-        <div id="captionRow2" class="caption-row caption-row-2">
+      <div class="caption-rollup-viewport">
+        <div id="captionTop" class="caption-line caption-line-top"></div>
+        <div id="captionBottom" class="caption-line caption-line-bottom">
           <span id="captionLive" class="live-phrase">Presioná RECORD para comenzar...</span>
           <span class="cursor-blink"></span>
         </div>
@@ -264,7 +264,7 @@
     const tabStage1 = document.getElementById('tabStage1');
     const tabStage2 = document.getElementById('tabStage2');
     const tabStage3 = document.getElementById('tabStage3');
-    const captionRow1 = document.getElementById('captionRow1');
+    const captionTop = document.getElementById('captionTop');
     const captionLive = document.getElementById('captionLive');
     const btnRecordToggle = document.getElementById('btnRecordToggle');
     const recordDot = document.getElementById('recordDot');
@@ -317,7 +317,7 @@
       spanishFinal = '';
       englishFinal = '';
       portugueseFinal = '';
-      streamerLive.previousLine = '';
+      streamerLive.committedLine = '';
       renderCaptions();
     }
 
@@ -330,49 +330,58 @@
       renderCaptions();
     }
 
-    class TwoRowStreamer {
-      constructor(row1El, row2El, defaultRow1 = '🎙️ Nerdearla 2026 • Transcripción en Vivo', defaultRow2 = 'Presioná RECORD para comenzar...') {
-        this.row1El = row1El;
-        this.row2El = row2El;
-        this.defaultRow1 = defaultRow1;
-        this.defaultRow2 = defaultRow2;
-        this.previousLine = '';
-        this.lastRawText = '';
-        this.displayedCount = 0;
+    class GoldenRollUpStreamer {
+      constructor(topEl, bottomEl, placeholder = 'Presioná RECORD para comenzar...') {
+        this.topEl = topEl;
+        this.bottomEl = bottomEl;
+        this.placeholder = placeholder;
+        this.previousCommitted = '';
         this.targetWords = [];
+        this.displayedCount = 0;
+        this.maxWordsPerLine = 7;
         this.timer = null;
+        this.lastRawText = '';
       }
 
-      setPreviousLine(text) {
+      setCommittedLine(text) {
         if (!text || !text.trim()) return;
         const words = text.trim().split(/\s+/).filter(Boolean);
         if (words.length > 0) {
-          this.previousLine = words.slice(-6).join(' ');
+          const line = words.slice(-this.maxWordsPerLine).join(' ');
+          if (line !== this.previousCommitted) {
+            this.previousCommitted = line;
+          }
         }
       }
 
-      renderTwoRows(words) {
+      render(words) {
         if (!words || words.length === 0) {
-          this.row1El.innerText = this.previousLine || this.defaultRow1;
-          this.row2El.innerText = isBroadcasting ? 'Escuchando al orador...' : this.defaultRow2;
+          this.topEl.innerText = '';
+          this.bottomEl.innerText = isBroadcasting ? 'Escuchando al orador...' : this.placeholder;
           return;
         }
 
-        if (words.length <= 4) {
-          this.row1El.innerText = this.previousLine || this.defaultRow1;
-          this.row2El.innerText = words.join(' ');
+        if (words.length <= this.maxWordsPerLine) {
+          const currentJoined = words.join(' ');
+          // Si la frase actual es distinta a la anterior comprometida, mostrar la anterior en Línea 1
+          if (this.previousCommitted && this.previousCommitted !== currentJoined) {
+            this.topEl.innerText = this.previousCommitted;
+          } else {
+            this.topEl.innerText = '';
+          }
+          this.bottomEl.innerText = currentJoined;
         } else {
-          // Repartir equilibradamente entre las 2 filas (máximo 6 palabras por fila = 12 total)
-          const visible = words.slice(-12);
-          const splitIdx = Math.ceil(visible.length / 2);
-          this.row1El.innerText = visible.slice(0, splitIdx).join(' ');
-          this.row2El.innerText = visible.slice(splitIdx).join(' ');
+          // Roll-up de 2 líneas dentro de una oración larga
+          const visible = words.slice(-(this.maxWordsPerLine * 2));
+          const splitIdx = Math.max(1, visible.length - this.maxWordsPerLine);
+          this.topEl.innerText = visible.slice(0, splitIdx).join(' ');
+          this.bottomEl.innerText = visible.slice(splitIdx).join(' ');
         }
       }
 
       streamTo(fullText) {
         if (!fullText || !fullText.trim()) {
-          this.renderTwoRows([]);
+          this.render([]);
           this.displayedCount = 0;
           this.targetWords = [];
           this.lastRawText = '';
@@ -400,17 +409,17 @@
           if (this.displayedCount < this.targetWords.length) {
             this.displayedCount++;
             const currentSubset = this.targetWords.slice(0, this.displayedCount);
-            this.renderTwoRows(currentSubset);
+            this.render(currentSubset);
           } else {
             clearInterval(this.timer);
             this.timer = null;
-            this.renderTwoRows(this.targetWords);
+            this.render(this.targetWords);
           }
         }, 40);
       }
     }
 
-    const streamerLive = new TwoRowStreamer(captionRow1, captionLive, '🎙️ Nerdearla 2026 • Transcripción en Vivo', 'Presioná RECORD para comenzar...');
+    const streamerLive = new GoldenRollUpStreamer(captionTop, captionLive, 'Presioná RECORD para comenzar...');
 
     function renderCaptions() {
       let activeText = '';
@@ -545,13 +554,13 @@
               renderCaptions();
             } else if (msg.type === 'final') {
               const txt = msg.data.segment.text || '';
-              streamerLive.setPreviousLine(txt);
+              streamerLive.setCommittedLine(txt);
               originalFinal = txt;
               originalPartial = '';
               renderCaptions();
             } else if (msg.type === 'translation') {
               const trTxt = msg.data.es || msg.data.text || '';
-              streamerLive.setPreviousLine(trTxt);
+              streamerLive.setCommittedLine(trTxt);
               spanishFinal = trTxt;
               englishFinal = msg.data.en || msg.data.text || '';
               portugueseFinal = msg.data.pt || msg.data.text || '';
