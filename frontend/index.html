@@ -183,7 +183,7 @@
       <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:10px;">
         <div>
           <div style="display:flex; align-items:center; gap:8px;">
-            <span class="badge-live" style="font-size:10px; padding:2px 8px;"><span class="dot"></span> LIVE</span>
+            <span id="audienceLiveBadge" class="badge-live" style="font-size:10px; padding:2px 8px;"><span class="dot"></span> LIVE</span>
             <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">
               Subtítulos en Vivo
             </span>
@@ -431,24 +431,81 @@
       }
       const db = firebase.database();
 
-      // Fix 1: Listeners separados por nodo para evitar cascadas de onValue.
-      // Una sola escucha al nodo raíz dispara onValue hasta 4 veces por segmento
-      // (publishPartial + publishFinal + 3 PUT de traducciones + 1 PATCH activeTranslation).
-      // Al escuchar nodos específicos, cada listener se activa SOLO cuando SU dato cambia.
+      // Función para limpiar al 100% la pantalla ante una nueva grabación
+      let lastKnownResetAt = 0;
+      function wipeSessionAudience() {
+        console.log(`[Audience] Limpiando sesión por nueva grabación en ${sessionId}...`);
+        originalPartial = '';
+        originalFinal = '';
+        spanishFinal = '';
+        englishFinal = '';
+        portugueseFinal = '';
+        lastProcessedSequence = -1;
+        sessionHistory.length = 0;
+        streamerAudience.previousCommitted = '';
+        streamerAudience.lastRawText = '';
+        captionTop.innerText = '';
+        captionLive.innerText = 'Esperando inicio de la conferencia...';
 
-      // 1a. Listener: texto parcial en vivo (interim)
+        const liveBadge = document.getElementById('audienceLiveBadge');
+        if (liveBadge) {
+          liveBadge.className = 'badge-live';
+          liveBadge.style.color = '';
+          liveBadge.innerHTML = '<span class="dot"></span> LIVE';
+        }
+      }
+
+      // 1. Listener de reinicio limpio de sesión (sessionResetAt)
+      db.ref(`liveSessions/${sessionId}/sessionResetAt`).on('value', (snapshot) => {
+        const resetAt = snapshot.val();
+        if (resetAt && resetAt !== lastKnownResetAt) {
+          lastKnownResetAt = resetAt;
+          wipeSessionAudience();
+        }
+      });
+
+      // 2. Listener de estado de sesión (live / stopped)
+      db.ref(`liveSessions/${sessionId}/status`).on('value', (snapshot) => {
+        const status = snapshot.val();
+        const liveBadge = document.getElementById('audienceLiveBadge');
+        if (status === 'stopped') {
+          if (liveBadge) {
+            liveBadge.className = 'stage-pill';
+            liveBadge.style.color = '#94A3B8';
+            liveBadge.innerHTML = '⏹️ FINALIZADA';
+          }
+          captionTop.innerText = '';
+          captionLive.innerText = 'Conferencia finalizada • Bloque cerrado';
+        } else if (status === 'live') {
+          if (liveBadge) {
+            liveBadge.className = 'badge-live';
+            liveBadge.style.color = '';
+            liveBadge.innerHTML = '<span class="dot"></span> LIVE';
+          }
+        }
+      });
+
+      // 3. Listener: texto parcial en vivo (interim)
       db.ref(`liveSessions/${sessionId}/current`).on('value', (snapshot) => {
         const data = snapshot.val();
-        if (!data) return;
+        if (!data || !data.partialText) {
+          originalPartial = '';
+          renderCaptions();
+          return;
+        }
         rtdbConnected = true;
         originalPartial = data.partialText || '';
         renderCaptions();
       });
 
-      // 1b. Listener: segmento final con guard de secuencia (Fix 3)
+      // 4. Listener: segmento final con guard de secuencia (Fix 3)
       db.ref(`liveSessions/${sessionId}/lastFinal`).on('value', (snapshot) => {
         const data = snapshot.val();
-        if (!data || !data.text) return;
+        if (!data || !data.text) {
+          originalFinal = '';
+          if (!originalPartial) renderCaptions();
+          return;
+        }
         rtdbConnected = true;
 
         // Fix 3: descartar segmentos viejos tras reconexión de Gemini
@@ -459,7 +516,7 @@
         if (data.text !== originalFinal) {
           originalFinal = data.text;
           if (currentMode === 'original') streamerAudience.setCommittedLine(originalFinal);
-          // Acumular en historial para exportar a SRT (las traducciones se agregan desde listener 1c)
+          // Acumular en historial para exportar a SRT (las traducciones se agregan desde listener traducciones)
           sessionHistory.push({
             time: new Date(),
             seq: incomingSeq,
@@ -472,16 +529,21 @@
         renderCaptions();
       });
 
-      // 1c. Listener: traducciones (es / en / pt) — nodo único que las agrupa
+      // 5. Listener: traducciones (es / en / pt) — nodo único que las agrupa
       db.ref(`liveSessions/${sessionId}/translations`).on('value', (snapshot) => {
         const data = snapshot.val();
-        if (!data) return;
+        if (!data) {
+          spanishFinal = '';
+          englishFinal = '';
+          portugueseFinal = '';
+          if (!originalPartial) renderCaptions();
+          return;
+        }
         rtdbConnected = true;
 
         if (data.es?.text) {
           spanishFinal = data.es.text;
           if (currentMode === 'es') streamerAudience.setCommittedLine(spanishFinal);
-          // Actualizar la entrada de historial más reciente con la traducción real
           if (sessionHistory.length > 0) sessionHistory[sessionHistory.length - 1].es = spanishFinal;
         }
         if (data.en?.text) {

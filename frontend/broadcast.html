@@ -214,6 +214,38 @@
       </div>
     </div>
 
+    <!-- Tarjeta de Bloque Empaquetado (Visible al presionar DETENER) -->
+    <div id="packagedBlockCard" style="display:none; margin-top:14px; background:rgba(17, 20, 29, 0.95); border:1px solid rgba(123, 79, 255, 0.4); border-radius:18px; padding:18px 22px; box-shadow:0 12px 35px rgba(0,0,0,0.5); animation:popIn 0.25s cubic-bezier(0.34, 1.4, 0.64, 1);">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:40px; height:40px; border-radius:12px; background:rgba(123,79,255,0.18); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;">
+            📦
+          </div>
+          <div>
+            <div style="font-size:14px; font-weight:700; color:#FFFFFF; letter-spacing:0.3px;">
+              Grabación finalizada y empaquetada
+            </div>
+            <div id="packagedStats" style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+              0 frases transcritas • Duración: 00:00
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="stage-tab" style="color:#A78BFA; border-color:rgba(123,79,255,0.4); background:rgba(123,79,255,0.12);" onclick="downloadBroadcastSrt()" title="Guardar transcripción de este bloque">
+            📥 Descargar SRT
+          </button>
+          <button class="stage-tab" style="color:#EF4444; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.08);" onclick="dismissPackagedBlock()" title="Descartar este bloque ahora">
+            🗑️ Descartar bloque
+          </button>
+        </div>
+      </div>
+      <div style="font-size:11px; color:var(--text-dim); margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
+        <span>ℹ️ Bloque cerrado. Al pulsar <strong>RECORD</strong> se descartará automáticamente y comenzará una nueva grabación limpia.</span>
+        <span style="color:#34D399; font-weight:600;">✔ Listo para descartar</span>
+      </div>
+    </div>
+
     <!-- Footer con enlaces a todos los módulos -->
     <div style="margin-top:auto; padding-top:20px; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-dim); border-top:1px solid var(--border); flex-wrap:wrap; gap:10px;">
       <span style="font-weight:600; color:var(--text-muted);">Nerdearla 2026</span>
@@ -282,6 +314,10 @@
     let englishFinal = '';
     let portugueseFinal = '';
 
+    // Historial acumulado y métricas del bloque actual de grabación
+    let sessionHistory = [];
+    let recordStartTime = null;
+
     // Variables de audio y WebSocket
     let audioContext = null;
     let mediaStream = null;
@@ -307,6 +343,7 @@
       sessionId = newSession;
       window.history.replaceState(null, '', `?session=${sessionId}`);
       updateStageTabs();
+      dismissPackagedBlock();
       // Limpiar buffers
       originalPartial = '';
       originalFinal = '';
@@ -434,10 +471,23 @@
     }
 
     async function startBroadcast() {
+      // 1. Limpieza instantánea sincrónica (0ms) de la pantalla antes de cualquier petición de red
+      dismissPackagedBlock(false);
+      captionTop.innerText = '';
+      captionLive.innerText = 'Iniciando nueva grabación...';
+      originalPartial = '';
+      originalFinal = '';
+      spanishFinal = '';
+      englishFinal = '';
+      portugueseFinal = '';
+      sessionHistory = [];
+      streamerLive.previousCommitted = '';
+      streamerLive.lastRawText = '';
+
       try {
         btnRecordToggle.disabled = true;
         recordText.innerText = 'CONECTANDO...';
-        statusIndicator.innerText = `Conectando con servidor de audio para ${sessionId.toUpperCase()}...`;
+        statusIndicator.innerText = `Iniciando nueva grabación para ${sessionId.toUpperCase()}...`;
 
         const wsUrl = getWsUrl();
 
@@ -484,17 +534,11 @@
             sourceNode.connect(workletNode);
 
             isBroadcasting = true;
+            recordStartTime = Date.now();
 
-            // Limpiar buffers de la sesión anterior para arrancar limpio
-            originalPartial = '';
-            originalFinal = '';
-            spanishFinal = '';
-            englishFinal = '';
-            portugueseFinal = '';
-            streamerLive.previousCommitted = '';
-            streamerLive.lastRawText = '';
-            streamerLive.topEl.innerText = '';
-            streamerLive.bottomEl.innerText = 'Escuchando al orador...';
+            // Asegurar pantalla 100% limpia de nuevo
+            captionTop.innerText = '';
+            captionLive.innerText = 'Escuchando al orador...';
 
             btnRecordToggle.disabled = false;
             btnRecordToggle.classList.add('recording');
@@ -505,7 +549,6 @@
             tabStage2.disabled = true;
             tabStage3.disabled = true;
             statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Transmitiendo audio)`;
-            renderCaptions();
           } catch (err) {
             console.error('Error al inicializar captura de audio:', err);
             alert(`Error al acceder al micrófono o audio: ${err.message}\n\nAsegurate de permitir el acceso al micrófono en el navegador.`);
@@ -520,11 +563,20 @@
               originalPartial = msg.data.partialText || '';
               renderCaptions();
             } else if (msg.type === 'final') {
-              const txt = msg.data.segment.text || '';
+              const txt = msg.data.segment?.text || '';
               originalFinal = txt;
               originalPartial = '';
-              // Fix 2: solo actualizar committed line si el modo activo es 'original'
               if (currentMode === 'original') streamerLive.setCommittedLine(txt);
+              
+              // Guardar en el historial del bloque actual
+              sessionHistory.push({
+                time: new Date(),
+                seq: msg.data.segment?.sequence || sessionHistory.length,
+                original: txt,
+                es: spanishFinal || txt,
+                en: englishFinal || txt,
+                pt: portugueseFinal || txt
+              });
               renderCaptions();
             } else if (msg.type === 'translation') {
               const trEs = msg.data.es || msg.data.text || '';
@@ -533,21 +585,29 @@
               spanishFinal = trEs;
               englishFinal = trEn;
               portugueseFinal = trPt;
-              // Fix 2: actualizar committed line solo para el idioma activo
               if (currentMode === 'es') streamerLive.setCommittedLine(trEs);
               else if (currentMode === 'en') streamerLive.setCommittedLine(trEn);
               else if (currentMode === 'pt') streamerLive.setCommittedLine(trPt);
+
+              if (sessionHistory.length > 0) {
+                const last = sessionHistory[sessionHistory.length - 1];
+                last.es = trEs;
+                last.en = trEn;
+                last.pt = trPt;
+              }
               renderCaptions();
             } else if (msg.type === 'gemini_status') {
               if (msg.status === 'connected') {
                 statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Gemini Live Conectado)`;
               }
+            } else if (msg.type === 'session_reset') {
+              console.log('[Broadcast] Sesión reseteada por el backend.');
             }
           } catch (e) {}
         };
 
         ws.onclose = () => {
-          stopBroadcast();
+          if (isBroadcasting) stopBroadcast();
         };
 
         ws.onerror = (err) => {
@@ -566,9 +626,16 @@
 
     function stopBroadcast() {
       if (connectTimeout) clearTimeout(connectTimeout);
+      const wasBroadcasting = isBroadcasting;
       isBroadcasting = false;
+
       if (ws) {
-        try { ws.close(); } catch (e) {}
+        try {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ action: 'stop' }));
+          }
+          ws.close();
+        } catch (e) {}
         ws = null;
       }
 
@@ -583,27 +650,83 @@
 
       btnRecordToggle.disabled = false;
       btnRecordToggle.classList.remove('recording');
-      recordDot.style.background = '#fff';
+      recordDot.style.background = '#EF4444';
       recordText.innerText = 'RECORD';
 
       tabStage1.disabled = false;
       tabStage2.disabled = false;
       tabStage3.disabled = false;
-      statusIndicator.innerText = 'Transmisión detenida';
+      statusIndicator.innerHTML = '<span style="color:#34D399; font-weight:700;">✔ Grabación empaquetada y archivada</span> • Lista para ser descartada al pulsar RECORD.';
 
-      // Limpiar todos los buffers para que el próximo Record arranque vacío
-      originalPartial = '';
-      originalFinal = '';
-      spanishFinal = '';
-      englishFinal = '';
-      portugueseFinal = '';
-      streamerLive.previousCommitted = '';
-      streamerLive.lastRawText = '';
-      streamerLive.displayedCount = 0;
-      streamerLive.targetWords = [];
-      if (streamerLive.timer) { clearInterval(streamerLive.timer); streamerLive.timer = null; }
+      // Empaquetar y cerrar el bloque anterior si hubo grabación
+      if (wasBroadcasting || sessionHistory.length > 0) {
+        showPackagedBlock();
+      }
+    }
 
-      renderCaptions();
+    function showPackagedBlock() {
+      const card = document.getElementById('packagedBlockCard');
+      const stats = document.getElementById('packagedStats');
+      const durationSec = recordStartTime ? Math.round((Date.now() - recordStartTime) / 1000) : 0;
+      const mins = String(Math.floor(durationSec / 60)).padStart(2, '0');
+      const secs = String(durationSec % 60).padStart(2, '0');
+      const count = sessionHistory.length;
+
+      if (stats) {
+        stats.innerText = `${count} frases transcritas • Duración: ${mins}:${secs} • Canal: ${sessionId.toUpperCase()}`;
+      }
+      if (card) {
+        card.style.display = 'block';
+      }
+    }
+
+    function dismissPackagedBlock(resetCaptions = true) {
+      const card = document.getElementById('packagedBlockCard');
+      if (card) card.style.display = 'none';
+      sessionHistory = [];
+      recordStartTime = null;
+      if (resetCaptions) {
+        originalPartial = '';
+        originalFinal = '';
+        spanishFinal = '';
+        englishFinal = '';
+        portugueseFinal = '';
+        streamerLive.previousCommitted = '';
+        streamerLive.lastRawText = '';
+        captionTop.innerText = '';
+        captionLive.innerText = 'Presioná RECORD para comenzar...';
+        statusIndicator.innerText = 'Listo para transmitir';
+      }
+    }
+
+    function downloadBroadcastSrt() {
+      if (sessionHistory.length === 0) {
+        alert('No hay frases transcritas en este bloque para exportar.');
+        return;
+      }
+      let content = "";
+      const baseTime = sessionHistory[0].time.getTime();
+
+      sessionHistory.forEach((item, idx) => {
+        const startSec = Math.floor((item.time.getTime() - baseTime) / 1000);
+        const endSec = startSec + 4;
+
+        function formatSrtTime(s) {
+          const hrs = String(Math.floor(s / 3600)).padStart(2, '0');
+          const mins = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+          const secs = String(s % 60).padStart(2, '0');
+          return `${hrs}:${mins}:${secs},000`;
+        }
+
+        const text = item[currentMode] || item.original;
+        content += `${idx + 1}\n${formatSrtTime(startSec)} --> ${formatSrtTime(endSec)}\n${text}\n\n`;
+      });
+
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `nerdearla-${sessionId}-${currentMode}.srt`;
+      a.click();
     }
 
     // Funciones del Modal de QR

@@ -115,10 +115,13 @@ export class FirebasePublisher {
   }
   async clearSession(sessionId) {
     try {
+      const now = Date.now();
       const url = `${this.databaseURL}/liveSessions/${sessionId}.json`;
       const body = {
-        status: 'idle',
-        current: { partialText: '', updatedAt: Date.now() },
+        status: 'live',
+        sessionResetAt: now,
+        stoppedAt: null,
+        current: { partialText: '', updatedAt: now },
         lastFinal: null,
         translations: null,
         activeTranslation: null,
@@ -129,9 +132,28 @@ export class FirebasePublisher {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
-      console.log(`[FirebasePublisher] Sesión ${sessionId} limpiada en RTDB.`);
+      console.log(`[FirebasePublisher] Sesión ${sessionId} reiniciada desde cero en RTDB (resetAt: ${now}).`);
     } catch (err) {
       console.error(`[FirebasePublisher] Error limpiando sesión:`, err.message);
+    }
+  }
+
+  async stopSession(sessionId) {
+    try {
+      const url = `${this.databaseURL}/liveSessions/${sessionId}.json`;
+      const body = {
+        status: 'stopped',
+        stoppedAt: Date.now(),
+        current: { partialText: '', updatedAt: Date.now() }
+      };
+      await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      console.log(`[FirebasePublisher] Sesión ${sessionId} empaquetada y marcada como stopped en RTDB.`);
+    } catch (err) {
+      console.error(`[FirebasePublisher] Error deteniendo sesión:`, err.message);
     }
   }
 }

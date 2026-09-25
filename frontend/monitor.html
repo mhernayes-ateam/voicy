@@ -160,6 +160,29 @@
           setTimeout(() => { text.dataset.hasFinal = 'false'; }, 8000);
         }
       });
+
+      // Listener de estado (live / stopped)
+      db.ref(`liveSessions/${stageId}/status`).on('value', (snap) => {
+        const val = snap.val();
+        if (val === 'stopped') {
+          badge.className = 'status-pill';
+          badge.innerText = 'Inactivo (Empaquetado)';
+          text.innerText = 'Sesión finalizada y empaquetada.';
+          text.dataset.hasFinal = 'false';
+        } else if (val === 'live') {
+          badge.className = 'status-pill active';
+          badge.innerText = '• EN VIVO';
+        }
+      });
+
+      // Listener de reinicio limpio
+      db.ref(`liveSessions/${stageId}/sessionResetAt`).on('value', (snap) => {
+        const val = snap.val();
+        if (val) {
+          text.innerText = 'Esperando voz del orador...';
+          text.dataset.hasFinal = 'false';
+        }
+      });
     }
 
     monitorStage('stage-1', 'badgeStage1', 'textStage1');

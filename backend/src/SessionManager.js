@@ -116,9 +116,13 @@ export class SessionManager {
         }
       }
 
-      // Notificar inmediatamente al broadcaster del estado de Gemini
+      // Notificar inmediatamente al broadcaster del estado de Gemini y de reseteo limpio
       const status = session.geminiClient && session.geminiClient.isConnected ? 'connected' : 'disconnected';
       if (broadcasterWs && broadcasterWs.readyState === 1) {
+        broadcasterWs.send(JSON.stringify({
+          type: 'session_reset',
+          sessionId: sessionId
+        }));
         broadcasterWs.send(JSON.stringify({
           type: 'gemini_status',
           status: status
@@ -140,8 +144,12 @@ export class SessionManager {
   handleBroadcasterDisconnect(sessionId) {
     const session = this.sessions.get(sessionId);
     if (session) {
-      console.log(`[SessionManager] Broadcaster desconectado de ${sessionId}`);
-      session.broadcasterWs = null;
+      console.log(`[SessionManager] Broadcaster desconectado de ${sessionId}. Empaquetando y liberando sesión.`);
+      this.publisher.stopSession(sessionId).catch(() => {});
+      if (session.geminiClient) {
+        session.geminiClient.cleanup();
+      }
+      this.sessions.delete(sessionId);
     }
   }
 
@@ -189,11 +197,12 @@ export class SessionManager {
   terminateSession(sessionId) {
     const session = this.sessions.get(sessionId);
     if (session) {
+      this.publisher.stopSession(sessionId).catch(() => {});
       if (session.geminiClient) {
         session.geminiClient.cleanup();
       }
       this.sessions.delete(sessionId);
-      console.log(`[SessionManager] Sesión ${sessionId} terminada.`);
+      console.log(`[SessionManager] Sesión ${sessionId} terminada y empaquetada.`);
     }
   }
 }
