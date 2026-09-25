@@ -88,9 +88,24 @@ export class SessionManager {
       } catch (err) {
         console.error(`[SessionManager] No se pudo conectar a Gemini para la sesión ${sessionId}:`, err.message);
       }
+
+      // Limpiar RTDB al iniciar sesión nueva (la audiencia ve pantalla en blanco)
+      this.publisher.clearSession(sessionId).catch(() => {});
+
     } else {
       console.log(`[SessionManager] Reconectando broadcaster a sesión existente: ${sessionId}`);
       session.broadcasterWs = broadcasterWs;
+
+      // Nuevo Record = nueva sesión limpia: limpiar RTDB y resetear SegmentManager
+      this.publisher.clearSession(sessionId).catch(() => {});
+      session.segmentManager.sequence = 0;
+      session.segmentManager.currentPartialText = '';
+      session.segmentManager.finalizedPrefix = '';
+      session.segmentManager.lastFinalSegment = null;
+      if (session.segmentManager.silenceFinalizeTimer) {
+        clearTimeout(session.segmentManager.silenceFinalizeTimer);
+        session.segmentManager.silenceFinalizeTimer = null;
+      }
 
       // Si geminiClient está desconectado, reconectarlo
       if (!session.geminiClient || !session.geminiClient.isConnected) {

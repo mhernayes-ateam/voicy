@@ -529,6 +529,19 @@
             sourceNode.connect(workletNode);
 
             isBroadcasting = true;
+
+            // Limpiar buffers de la sesión anterior para arrancar limpio
+            originalPartial = '';
+            originalFinal = '';
+            spanishFinal = '';
+            englishFinal = '';
+            portugueseFinal = '';
+            streamerLive.previousCommitted = '';
+            streamerLive.lastRawText = '';
+            streamerLive.displayedCount = 0;
+            streamerLive.targetWords = [];
+            if (streamerLive.timer) { clearInterval(streamerLive.timer); streamerLive.timer = null; }
+
             btnRecordToggle.disabled = false;
             btnRecordToggle.classList.add('recording');
             recordDot.style.background = '#F87171';
@@ -626,6 +639,19 @@
       tabStage2.disabled = false;
       tabStage3.disabled = false;
       statusIndicator.innerText = 'Transmisión detenida';
+
+      // Limpiar todos los buffers para que el próximo Record arranque vacío
+      originalPartial = '';
+      originalFinal = '';
+      spanishFinal = '';
+      englishFinal = '';
+      portugueseFinal = '';
+      streamerLive.previousCommitted = '';
+      streamerLive.lastRawText = '';
+      streamerLive.displayedCount = 0;
+      streamerLive.targetWords = [];
+      if (streamerLive.timer) { clearInterval(streamerLive.timer); streamerLive.timer = null; }
+
       renderCaptions();
     }
 

@@ -113,4 +113,25 @@ export class FirebasePublisher {
       console.error(`[FirebasePublisher] Error publicando traducción:`, err.message);
     }
   }
+  async clearSession(sessionId) {
+    try {
+      const url = `${this.databaseURL}/liveSessions/${sessionId}.json`;
+      const body = {
+        status: 'idle',
+        current: { partialText: '', updatedAt: Date.now() },
+        lastFinal: null,
+        translations: null,
+        activeTranslation: null,
+        metrics: null
+      };
+      await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      console.log(`[FirebasePublisher] Sesión ${sessionId} limpiada en RTDB.`);
+    } catch (err) {
+      console.error(`[FirebasePublisher] Error limpiando sesión:`, err.message);
+    }
+  }
 }
