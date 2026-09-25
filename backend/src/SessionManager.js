@@ -138,6 +138,11 @@ export class SessionManager {
     if (!session || !session.geminiClient) {
       return false;
     }
+    if (!session.audioChunkCount) session.audioChunkCount = 0;
+    session.audioChunkCount++;
+    if (session.audioChunkCount === 1 || session.audioChunkCount % 50 === 0) {
+      console.log(`[SessionManager:${sessionId}] 🔊 Audio streaming activo: chunk #${session.audioChunkCount} (${pcmBuffer.length} bytes)`);
+    }
     return session.geminiClient.sendAudioChunk(pcmBuffer);
   }
 

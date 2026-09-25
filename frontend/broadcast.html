@@ -184,14 +184,20 @@
       </div>
     </div>
 
-    <!-- Barra de Control: Botón de Record, Fuente y Botón de QR -->
+    <!-- Barra de Control: Botón de Record, Micrófono y Botón de QR -->
     <div class="record-bar">
       <button id="btnRecordToggle" class="btn-record" onclick="toggleBroadcast()">
         <span class="status-dot-mini" id="recordDot"></span>
         <span id="recordText">RECORD</span>
       </button>
 
-
+      <!-- Indicador de Nivel de Micrófono en Vivo -->
+      <div id="micMeterWrapper" style="display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); padding:6px 14px; border-radius:999px; height:38px;" title="Nivel de entrada del micrófono">
+        <span id="micIcon" style="font-size:14px; opacity:0.6;">🎙️</span>
+        <div style="width:60px; height:6px; background:rgba(255,255,255,0.1); border-radius:999px; overflow:hidden;">
+          <div id="micMeterFill" style="width:0%; height:100%; background:linear-gradient(90deg, #10B981, #F59E0B, #EF4444); border-radius:999px; transition:width 0.05s ease-out;"></div>
+        </div>
+      </div>
 
       <!-- Botón para Mostrar el QR de Audiencia en Pantalla -->
       <button class="stage-tab" style="display:inline-flex; align-items:center; gap:6px; margin-left:auto;" onclick="openQrModal()">
@@ -330,6 +336,9 @@
     let audioContext = null;
     let mediaStream = null;
     let workletNode = null;
+    let analyserNode = null;
+    let micAnimId = null;
+    const micMeterFill = document.getElementById('micMeterFill');
     let ws = null;
     let isBroadcasting = false;
     let sampleSourceNode = null;
@@ -518,6 +527,27 @@
           }
         }, 6000);
 
+        function startMicMeterLoop() {
+          if (micAnimId) cancelAnimationFrame(micAnimId);
+          function loop() {
+            if (!isBroadcasting || !analyserNode) {
+              if (micMeterFill) micMeterFill.style.width = '0%';
+              return;
+            }
+            const data = new Uint8Array(analyserNode.frequencyBinCount);
+            analyserNode.getByteFrequencyData(data);
+            let sum = 0;
+            for (let i = 0; i < data.length; i++) {
+              sum += data[i];
+            }
+            const avg = sum / data.length;
+            const pct = Math.min(100, Math.round((avg / 64) * 100));
+            if (micMeterFill) micMeterFill.style.width = `${pct}%`;
+            micAnimId = requestAnimationFrame(loop);
+          }
+          micAnimId = requestAnimationFrame(loop);
+        }
+
         ws = new WebSocket(wsUrl);
         ws.binaryType = 'arraybuffer';
 
@@ -541,6 +571,13 @@
             });
             const sourceNode = audioContext.createMediaStreamSource(mediaStream);
 
+            // 1. Conectar AnalyserNode para monitoreo visual del micrófono en vivo
+            analyserNode = audioContext.createAnalyser();
+            analyserNode.fftSize = 256;
+            sourceNode.connect(analyserNode);
+            startMicMeterLoop();
+
+            // 2. AudioWorklet resampler para PCM 16kHz
             workletNode = new AudioWorkletNode(audioContext, 'streaming-pcm-resampler');
 
             workletNode.port.onmessage = (event) => {
@@ -550,6 +587,12 @@
             };
 
             sourceNode.connect(workletNode);
+
+            // 3. MuteGain conectado a destination para garantizar que Chrome nunca pause el AudioWorklet
+            const muteGain = audioContext.createGain();
+            muteGain.gain.value = 0;
+            workletNode.connect(muteGain);
+            muteGain.connect(audioContext.destination);
 
             isBroadcasting = true;
             recordStartTime = Date.now();
@@ -570,7 +613,7 @@
           } catch (err) {
             console.error('Error al inicializar captura de audio:', err);
             alert(`Error al acceder al micrófono o audio: ${err.message}\n\nAsegurate de permitir el acceso al micrófono en el navegador.`);
-            stopBroadcast();
+            stopBroadcast(`Error de micrófono: ${err.message}`);
           }
         };
 
@@ -630,7 +673,9 @@
               renderCaptions();
             } else if (msg.type === 'gemini_status') {
               if (msg.status === 'connected') {
-                statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Gemini Live Conectado)`;
+                statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Gemini Live Conectado 🟢)`;
+              } else if (msg.status === 'quota_error') {
+                statusIndicator.innerText = `• En vivo en ${sessionId.toUpperCase()} (Reconectando por cuota de API...)`;
               }
             } else if (msg.type === 'session_reset') {
               console.log('[Broadcast] Sesión reseteada por el backend.');
@@ -639,27 +684,36 @@
         };
 
         ws.onclose = () => {
-          if (isBroadcasting) stopBroadcast();
+          if (isBroadcasting) {
+            stopBroadcast('Conexión perdida con el backend local (ws://localhost:8090)');
+          }
         };
 
         ws.onerror = (err) => {
           console.error('Error WebSocket:', err);
           if (connectTimeout) clearTimeout(connectTimeout);
-          statusIndicator.innerText = 'Error de conexión. Asegurate de que el backend esté corriendo en http://localhost:8090';
-          stopBroadcast();
+          stopBroadcast('Error conectando a ws://localhost:8090. Asegurate de que el backend esté corriendo');
         };
 
       } catch (err) {
         console.error('Error al iniciar transmisión:', err);
         alert(`Error al iniciar transmisión: ${err.message}`);
-        stopBroadcast();
+        stopBroadcast(`Error: ${err.message}`);
       }
     }
 
-    function stopBroadcast() {
+    function stopBroadcast(errorReason) {
       if (connectTimeout) clearTimeout(connectTimeout);
       const wasBroadcasting = isBroadcasting;
       isBroadcasting = false;
+
+      if (micAnimId) {
+        cancelAnimationFrame(micAnimId);
+        micAnimId = null;
+      }
+      if (micMeterFill) {
+        micMeterFill.style.width = '0%';
+      }
 
       if (ws) {
         try {
@@ -688,10 +742,15 @@
       tabStage1.disabled = false;
       tabStage2.disabled = false;
       tabStage3.disabled = false;
-      statusIndicator.innerHTML = '<span style="color:#34D399; font-weight:700;">✔ Grabación empaquetada y archivada</span> • Lista para ser descartada al pulsar RECORD.';
 
-      // Empaquetar y cerrar el bloque anterior si hubo grabación
-      if (wasBroadcasting || sessionHistory.length > 0) {
+      if (errorReason) {
+        statusIndicator.innerHTML = `<span style="color:#F87171; font-weight:700;">⚠️ ${errorReason}</span> • Presioná RECORD para reanudar.`;
+      } else {
+        statusIndicator.innerHTML = '<span style="color:#34D399; font-weight:700;">✔ Grabación empaquetada y archivada</span> • Lista para ser descartada al pulsar RECORD.';
+      }
+
+      // Empaquetar y cerrar el bloque anterior si hubo grabación exitosa
+      if (!errorReason && (wasBroadcasting || sessionHistory.length > 0)) {
         showPackagedBlock();
       }
     }

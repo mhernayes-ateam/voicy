@@ -149,6 +149,16 @@ export class GeminiConnectionManager {
     try {
       const payload = JSON.parse(rawData.toString());
 
+      if (payload.error) {
+        console.error(`[GeminiLive:${this.sessionId}] ❌ Error de Gemini Live:`, payload.error);
+        this.onError(new Error(payload.error.message || JSON.stringify(payload.error)));
+        return;
+      }
+
+      if (payload.setupComplete) {
+        console.log(`[GeminiLive:${this.sessionId}] ✅ Setup confirmado por Gemini Live.`);
+      }
+
       // 1. Guardar session handle si se entrega para resumption
       if (payload.sessionResumptionUpdate && payload.sessionResumptionUpdate.newHandle) {
         this.sessionHandle = payload.sessionResumptionUpdate.newHandle;
@@ -169,12 +179,14 @@ export class GeminiConnectionManager {
       // 3. Interim transcription (texto parcial e incremental)
       if (serverContent.interimInputTranscription && serverContent.interimInputTranscription.text) {
         const text = serverContent.interimInputTranscription.text;
+        console.log(`[GeminiLive:${this.sessionId}] 🎙️ Interim: "${text}"`);
         this.onInterim(text);
       }
 
       // 4. Input transcription (texto consolidado y definitivo)
       if (serverContent.inputTranscription && serverContent.inputTranscription.text) {
         const text = serverContent.inputTranscription.text;
+        console.log(`[GeminiLive:${this.sessionId}] 🏁 Final: "${text}"`);
         this.onFinal(text);
       }
     } catch (err) {
