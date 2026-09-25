@@ -327,7 +327,7 @@
         }
       }
 
-      streamTo(fullText) {
+      streamTo(fullText, animate = true) {
         if (!fullText || !fullText.trim()) {
           this.render([]);
           this.displayedCount = 0;
@@ -343,21 +343,26 @@
         const words = trimmed.split(/\s+/).filter(Boolean);
         this.targetWords = words;
 
-        if (this.displayedCount > this.targetWords.length || 
-            (this.displayedCount > 0 && this.targetWords[0] !== words[0])) {
-          this.displayedCount = Math.min(this.targetWords.length, 1);
-        }
-
         if (this.timer) {
           clearInterval(this.timer);
           this.timer = null;
         }
 
+        if (!animate) {
+          this.displayedCount = words.length;
+          this.render(this.targetWords);
+          return;
+        }
+
+        if (this.displayedCount > this.targetWords.length ||
+            (this.displayedCount > 0 && this.targetWords[0] !== words[0])) {
+          this.displayedCount = Math.min(this.targetWords.length, 1);
+        }
+
         this.timer = setInterval(() => {
           if (this.displayedCount < this.targetWords.length) {
             this.displayedCount++;
-            const currentSubset = this.targetWords.slice(0, this.displayedCount);
-            this.render(currentSubset);
+            this.render(this.targetWords.slice(0, this.displayedCount));
           } else {
             clearInterval(this.timer);
             this.timer = null;
@@ -371,19 +376,27 @@
 
     function renderCaptions() {
       let activeText = '';
+      let isPartial = false;
+
       if (currentMode === 'original') {
-        // En original: priorizar texto en vivo mientras se habla
-        activeText = originalPartial || originalFinal;
+        if (originalPartial) { activeText = originalPartial; isPartial = true; }
+        else { activeText = originalFinal; }
       } else if (currentMode === 'es') {
-        activeText = spanishFinal || originalPartial || originalFinal;
+        if (spanishFinal) { activeText = spanishFinal; }
+        else if (originalPartial) { activeText = originalPartial; isPartial = true; }
+        else { activeText = originalFinal; }
       } else if (currentMode === 'en') {
-        activeText = englishFinal || originalPartial || originalFinal;
+        if (englishFinal) { activeText = englishFinal; }
+        else if (originalPartial) { activeText = originalPartial; isPartial = true; }
+        else { activeText = originalFinal; }
       } else if (currentMode === 'pt') {
-        activeText = portugueseFinal || originalPartial || originalFinal;
+        if (portugueseFinal) { activeText = portugueseFinal; }
+        else if (originalPartial) { activeText = originalPartial; isPartial = true; }
+        else { activeText = originalFinal; }
       }
 
       if (activeText) {
-        streamerAudience.streamTo(activeText);
+        streamerAudience.streamTo(activeText, isPartial);
       } else {
         streamerAudience.streamTo('');
       }
@@ -475,18 +488,55 @@
       console.warn("RTDB offline:", e.message);
     }
 
-    // Modal QR
-    function openQrModal() {
-      const baseUrl = window.location.hostname.includes('web.app') 
-        ? 'https://voicy-3fca6.web.app' 
-        : `${window.location.protocol}//${window.location.host}`;
-      
-      const audienceUrl = `${baseUrl}/?session=${sessionId}`;
-      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=8&data=${encodeURIComponent(audienceUrl)}`;
+    // Modal QR — pre-fetch de la imagen al cargar para que abra instantáneo
+    const _baseUrl = window.location.hostname.includes('web.app')
+      ? 'https://voicy-3fca6.web.app'
+      : `${window.location.protocol}//${window.location.host}`;
+    const _audienceUrl = `${_baseUrl}/?session=${sessionId}`;
+    const _qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=8&data=${encodeURIComponent(_audienceUrl)}`;
 
+    // Pre-cargar imagen QR en background
+    const _qrPreload = new Image();
+    _qrPreload.src = _qrApiUrl;
+
+    // Pre-renderizar contenido del modal de URLs al cargar (una sola vez)
+    (function buildUrlsModal() {
+      const urls = [
+        { title: "\uD83C\uDF99\uFE0F Studio Transmisión (Orador)", path: "/broadcast", desc: "Sala para emitir y subtitular audio en vivo" },
+        { title: "\uD83D\uDC65 Audiencia \u2014 Stage 1", path: "/?session=stage-1", desc: "Subtítulos en vivo para Sala 1" },
+        { title: "\uD83D\uDC65 Audiencia \u2014 Stage 2", path: "/?session=stage-2", desc: "Subtítulos en vivo para Sala 2" },
+        { title: "\uD83D\uDC65 Audiencia \u2014 Stage 3", path: "/?session=stage-3", desc: "Subtítulos en vivo para Sala 3" },
+        { title: "\uD83D\uDCFA Overlay OBS / vMix (Stage 1)", path: "/overlay?session=stage-1&lang=es", desc: "Lower-third transparente para streaming" },
+        { title: "\uD83D\uDCFA Overlay OBS / vMix (Stage 2)", path: "/overlay?session=stage-2&lang=en", desc: "Lower-third en inglés para streaming" },
+        { title: "\uD83C\uDF9B\uFE0F Monitor Técnico de Producción", path: "/monitor", desc: "Panel de control global de las 3 salas" }
+      ];
+      const container = document.getElementById('urlsListContainer');
+      if (container) {
+        container.innerHTML = urls.map(u => {
+          const fullUrl = `${_baseUrl}${u.path}`;
+          return `
+            <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:10px 14px; display:flex; flex-direction:column; gap:4px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:700; font-size:13px; color:#FFFFFF;">${u.title}</span>
+                <a href="${u.path}" target="_blank" style="font-size:11px; color:#A78BFA; text-decoration:none; font-weight:600; padding:2px 8px; background:rgba(123,79,255,0.15); border-radius:6px;">Abrir &#x2197;</a>
+              </div>
+              <div style="font-size:11px; color:var(--text-muted);">${u.desc}</div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
+                <code style="font-size:11px; color:var(--brand-cyan); word-break:break-all; flex:1;">${fullUrl}</code>
+                <button onclick="navigator.clipboard.writeText('${fullUrl}').then(() => { this.innerText = 'Copiado!'; setTimeout(() => this.innerText = 'Copiar', 1500); })"
+                        style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); font-size:10px; font-weight:600; padding:3px 8px; border-radius:6px; cursor:pointer;">
+                  Copiar
+                </button>
+              </div>
+            </div>`;
+        }).join('');
+      }
+    })();
+
+    function openQrModal() {
       document.getElementById('qrStageTitle').innerText = sessionId.replace('-', ' ').toUpperCase();
-      document.getElementById('qrImage').src = qrApiUrl;
-      document.getElementById('qrUrlLabel').innerText = audienceUrl;
+      document.getElementById('qrImage').src = _qrApiUrl;
+      document.getElementById('qrUrlLabel').innerText = _audienceUrl;
       document.getElementById('qrModal').style.display = 'flex';
     }
 
@@ -528,43 +578,8 @@
       a.click();
     }
 
-    // Modal con todas las URLs del sistema en el raíz
+    // Modal URLs — el contenido ya está pre-renderizado al cargar la página
     function openUrlsModal() {
-      const baseUrl = window.location.hostname.includes('web.app') 
-        ? 'https://voicy-3fca6.web.app' 
-        : `${window.location.protocol}//${window.location.host}`;
-
-      const urls = [
-        { title: "🎙️ Studio Transmisión (Orador)", path: "/broadcast", desc: "Sala para emitir y subtitular audio en vivo" },
-        { title: "👥 Audiencia — Stage 1", path: "/?session=stage-1", desc: "Subtítulos en vivo para Sala 1" },
-        { title: "👥 Audiencia — Stage 2", path: "/?session=stage-2", desc: "Subtítulos en vivo para Sala 2" },
-        { title: "👥 Audiencia — Stage 3", path: "/?session=stage-3", desc: "Subtítulos en vivo para Sala 3" },
-        { title: "📺 Overlay OBS / vMix (Stage 1)", path: "/overlay?session=stage-1&lang=es", desc: "Lower-third transparente para streaming" },
-        { title: "📺 Overlay OBS / vMix (Stage 2)", path: "/overlay?session=stage-2&lang=en", desc: "Lower-third en inglés para streaming" },
-        { title: "🎛️ Monitor Técnico de Producción", path: "/monitor", desc: "Panel de control global de las 3 salas" }
-      ];
-
-      const container = document.getElementById('urlsListContainer');
-      container.innerHTML = urls.map(u => {
-        const fullUrl = `${baseUrl}${u.path}`;
-        return `
-          <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:10px 14px; display:flex; flex-direction:column; gap:4px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-weight:700; font-size:13px; color:#FFFFFF;">${u.title}</span>
-              <a href="${u.path}" target="_blank" style="font-size:11px; color:#A78BFA; text-decoration:none; font-weight:600; padding:2px 8px; background:rgba(123,79,255,0.15); border-radius:6px;">Abrir ↗</a>
-            </div>
-            <div style="font-size:11px; color:var(--text-muted);">${u.desc}</div>
-            <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
-              <code style="font-size:11px; color:var(--brand-cyan); word-break:break-all; flex:1;">${fullUrl}</code>
-              <button onclick="navigator.clipboard.writeText('${fullUrl}').then(() => { this.innerText = 'Copiado!'; setTimeout(() => this.innerText = 'Copiar', 1500); })" 
-                      style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); font-size:10px; font-weight:600; padding:3px 8px; border-radius:6px; cursor:pointer;">
-                Copiar
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
-
       document.getElementById('urlsModal').style.display = 'flex';
     }
 

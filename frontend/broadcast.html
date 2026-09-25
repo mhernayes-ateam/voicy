@@ -192,10 +192,7 @@
         <span id="recordText">RECORD</span>
       </button>
 
-      <select id="selAudioSource" class="source-select-minimal">
-        <option value="mic">🎙️ Micrófono en Vivo</option>
-        <option value="sample">🎵 Audio Demo (Nerdearla EN)</option>
-      </select>
+
 
       <!-- Botón para Mostrar el QR de Audiencia en Pantalla -->
       <button class="stage-tab" style="display:inline-flex; align-items:center; gap:6px; margin-left:auto;" onclick="openQrModal()">
@@ -379,7 +376,9 @@
         }
       }
 
-      streamTo(fullText) {
+      // animate=true → palabra a palabra (parciales en vivo)
+      // animate=false → instantáneo (finales/traducciones que ya llegaron tarde)
+      streamTo(fullText, animate = true) {
         if (!fullText || !fullText.trim()) {
           this.render([]);
           this.displayedCount = 0;
@@ -395,21 +394,27 @@
         const words = trimmed.split(/\s+/).filter(Boolean);
         this.targetWords = words;
 
-        if (this.displayedCount > this.targetWords.length || 
-            (this.displayedCount > 0 && this.targetWords[0] !== words[0])) {
-          this.displayedCount = Math.min(this.targetWords.length, 1);
-        }
-
         if (this.timer) {
           clearInterval(this.timer);
           this.timer = null;
         }
 
+        if (!animate) {
+          // Mostrar todo de golpe — el orador ya terminó la frase
+          this.displayedCount = words.length;
+          this.render(this.targetWords);
+          return;
+        }
+
+        if (this.displayedCount > this.targetWords.length ||
+            (this.displayedCount > 0 && this.targetWords[0] !== words[0])) {
+          this.displayedCount = Math.min(this.targetWords.length, 1);
+        }
+
         this.timer = setInterval(() => {
           if (this.displayedCount < this.targetWords.length) {
             this.displayedCount++;
-            const currentSubset = this.targetWords.slice(0, this.displayedCount);
-            this.render(currentSubset);
+            this.render(this.targetWords.slice(0, this.displayedCount));
           } else {
             clearInterval(this.timer);
             this.timer = null;
@@ -423,19 +428,27 @@
 
     function renderCaptions() {
       let activeText = '';
+      let isPartial = false; // solo los parciales se animan palabra a palabra
+
       if (currentMode === 'original') {
-        // En original: priorizar texto en vivo mientras se habla
-        activeText = originalPartial || originalFinal;
+        if (originalPartial) { activeText = originalPartial; isPartial = true; }
+        else { activeText = originalFinal; }
       } else if (currentMode === 'es') {
-        activeText = spanishFinal || originalPartial || originalFinal;
+        if (spanishFinal) { activeText = spanishFinal; }
+        else if (originalPartial) { activeText = originalPartial; isPartial = true; }
+        else { activeText = originalFinal; }
       } else if (currentMode === 'en') {
-        activeText = englishFinal || originalPartial || originalFinal;
+        if (englishFinal) { activeText = englishFinal; }
+        else if (originalPartial) { activeText = originalPartial; isPartial = true; }
+        else { activeText = originalFinal; }
       } else if (currentMode === 'pt') {
-        activeText = portugueseFinal || originalPartial || originalFinal;
+        if (portugueseFinal) { activeText = portugueseFinal; }
+        else if (originalPartial) { activeText = originalPartial; isPartial = true; }
+        else { activeText = originalFinal; }
       }
 
       if (activeText) {
-        streamerLive.streamTo(activeText);
+        streamerLive.streamTo(activeText, isPartial);
       } else {
         streamerLive.streamTo(isBroadcasting ? 'Escuchando al orador...' : '');
       }
@@ -498,25 +511,15 @@
 
             await audioContext.audioWorklet.addModule('/worklets/pcm-processor.js');
 
-            let sourceNode = null;
-
-            if (selAudioSource.value === 'sample') {
-              const audioElem = new Audio('/samples/nerdearla-sample.wav');
-              audioElem.loop = true;
-              await audioElem.play().catch(() => {});
-              sourceNode = audioContext.createMediaElementSource(audioElem);
-              sampleSourceNode = audioElem;
-            } else {
-              mediaStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                  channelCount: 1,
-                  echoCancellation: true,
-                  noiseSuppression: true,
-                  autoGainControl: true
-                }
-              });
-              sourceNode = audioContext.createMediaStreamSource(mediaStream);
-            }
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                channelCount: 1,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+              }
+            });
+            const sourceNode = audioContext.createMediaStreamSource(mediaStream);
 
             workletNode = new AudioWorkletNode(audioContext, 'streaming-pcm-resampler');
 
@@ -546,7 +549,7 @@
             btnRecordToggle.classList.add('recording');
             recordDot.style.background = '#F87171';
             recordText.innerText = 'DETENER';
-            selAudioSource.disabled = true;
+
             tabStage1.disabled = true;
             tabStage2.disabled = true;
             tabStage3.disabled = true;
@@ -617,10 +620,7 @@
         try { ws.close(); } catch (e) {}
         ws = null;
       }
-      if (sampleSourceNode) {
-        try { sampleSourceNode.pause(); } catch (e) {}
-        sampleSourceNode = null;
-      }
+
       if (mediaStream) {
         try { mediaStream.getTracks().forEach(t => t.stop()); } catch (e) {}
         mediaStream = null;
@@ -634,7 +634,7 @@
       btnRecordToggle.classList.remove('recording');
       recordDot.style.background = '#fff';
       recordText.innerText = 'RECORD';
-      selAudioSource.disabled = false;
+
       tabStage1.disabled = false;
       tabStage2.disabled = false;
       tabStage3.disabled = false;
