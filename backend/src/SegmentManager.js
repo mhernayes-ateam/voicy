@@ -46,10 +46,10 @@ export class SegmentManager {
     this.currentPartialText = currentText;
     const words = currentText.split(/\s+/).filter(Boolean);
 
-    // Condición 1: Finalizar automáticamente si alcanza 11 palabras (máximo 2 líneas de subtítulo)
-    // Condición 2: Finalizar si termina en puntuación (. ? !) y tiene al menos 4 palabras
-    const hasPunctuation = /[.!?]$/.test(currentText) && words.length >= 4;
-    const reachesWordLimit = words.length >= 11;
+    // Condición 1: Finalizar automáticamente si alcanza 8 palabras (máximo 2 líneas de subtítulo)
+    // Condición 2: Finalizar si termina en puntuación (. ? !) y tiene al menos 3 palabras
+    const hasPunctuation = /[.!?]$/.test(currentText) && words.length >= 3;
+    const reachesWordLimit = words.length >= 8;
 
     if (hasPunctuation || reachesWordLimit) {
       if (this.silenceFinalizeTimer) {
@@ -70,14 +70,14 @@ export class SegmentManager {
       updatedAt: Date.now()
     });
 
-    // Auto-finalizar tras 1.2s de pausa en la voz si no hubo corte previo
+    // Auto-finalizar tras 600ms de pausa en la voz (antes 1200ms)
     if (this.silenceFinalizeTimer) clearTimeout(this.silenceFinalizeTimer);
     this.silenceFinalizeTimer = setTimeout(() => {
       if (this.currentPartialText && this.currentPartialText.trim().length > 0) {
         this.finalizedPrefix = rawText;
         this.handleFinal(this.currentPartialText.trim());
       }
-    }, 1200);
+    }, 600);
   }
 
   handleFinal(rawFinalText) {
@@ -99,8 +99,8 @@ export class SegmentManager {
 
     const endMs = Date.now();
 
-    // Evitar procesar el mismo texto exacto dos veces seguidas en menos de 2s
-    if (this.lastFinalSegment && this.lastFinalSegment.text === textToFinalize && (endMs - this.lastFinalSegment.endMs) < 2000) {
+    // Evitar procesar el mismo texto exacto dos veces seguidas en menos de 800ms
+    if (this.lastFinalSegment && this.lastFinalSegment.text === textToFinalize && (endMs - this.lastFinalSegment.endMs) < 800) {
       return;
     }
 
