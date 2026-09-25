@@ -46,6 +46,14 @@
         "destination": "/monitor.html"
       },
       {
+        "source": "/docs",
+        "destination": "/docs.html"
+      },
+      {
+        "source": "/docs/**",
+        "destination": "/docs.html"
+      },
+      {
         "source": "/session/**",
         "destination": "/index.html"
       },

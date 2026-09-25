@@ -97,6 +97,10 @@ const server = http.createServer((req, res) => {
     return serveStaticFile(path.join(FRONTEND_DIR, 'monitor.html'), res);
   }
 
+  if (pathname === '/docs' || pathname.startsWith('/docs')) {
+    return serveStaticFile(path.join(FRONTEND_DIR, 'docs.html'), res);
+  }
+
   if (pathname.startsWith('/session') || pathname.startsWith('/audience') || pathname.startsWith('/stage-')) {
     return serveStaticFile(path.join(FRONTEND_DIR, 'index.html'), res);
   }

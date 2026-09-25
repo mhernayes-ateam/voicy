@@ -230,6 +230,7 @@
           <a href="/broadcast" target="_blank" style="color:#A78BFA; text-decoration:none; font-weight:600;">🎙️ Transmitir</a>
           <a href="/overlay?session=stage-1&lang=es" target="_blank" style="color:var(--brand-cyan); text-decoration:none; font-weight:600;">📺 Overlay OBS</a>
           <a href="/monitor" target="_blank" style="color:#34D399; text-decoration:none; font-weight:600;">🎛️ Producción</a>
+          <a href="/docs" target="_blank" style="color:#F59E0B; text-decoration:none; font-weight:600;">📖 Docs</a>
           <button onclick="openUrlsModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; padding:0; text-decoration:underline;">
             🔗 Todas las URLs
           </button>
@@ -583,7 +584,8 @@
         { title: "\uD83D\uDC65 Audiencia \u2014 Stage 3", path: "/?session=stage-3", desc: "Subtítulos en vivo para Sala 3" },
         { title: "\uD83D\uDCFA Overlay OBS / vMix (Stage 1)", path: "/overlay?session=stage-1&lang=es", desc: "Lower-third transparente para streaming" },
         { title: "\uD83D\uDCFA Overlay OBS / vMix (Stage 2)", path: "/overlay?session=stage-2&lang=en", desc: "Lower-third en inglés para streaming" },
-        { title: "\uD83C\uDF9B\uFE0F Monitor Técnico de Producción", path: "/monitor", desc: "Panel de control global de las 3 salas" }
+        { title: "\uD83C\uDF9B\uFE0F Monitor Técnico de Producción", path: "/monitor", desc: "Panel de control global de las 3 salas" },
+        { title: "📖 Documentación Técnica Oficial", path: "/docs", desc: "Arquitectura, requisitos Vibeathon y guía de despliegue" }
       ];
       const container = document.getElementById('urlsListContainer');
       if (container) {

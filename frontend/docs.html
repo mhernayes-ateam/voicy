@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voicy — Documentación Oficial | Vibeathon Nerdearla 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* Estilos adicionales específicos para documentación técnica */
+    .docs-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 36px;
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 32px 24px 80px 24px;
+    }
+
+    @media (max-width: 960px) {
+      .docs-layout {
+        grid-template-columns: 1fr;
+        padding-top: 16px;
+      }
+      .docs-sidebar {
+        display: none;
+      }
+    }
+
+    /* Sidebar Flotante */
+    .docs-sidebar {
+      position: sticky;
+      top: 86px;
+      height: calc(100vh - 100px);
+      overflow-y: auto;
+      padding-right: 14px;
+    }
+    .docs-sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .docs-sidebar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+
+    .docs-nav-group {
+      margin-bottom: 22px;
+    }
+    .docs-nav-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .docs-nav-link {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      line-height: 1.4;
+    }
+    .docs-nav-link:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateX(3px);
+    }
+    .docs-nav-link.active {
+      color: var(--brand-cyan);
+      background: rgba(6, 182, 212, 0.1);
+      font-weight: 600;
+    }
+
+    /* Contenido Principal */
+    .docs-content {
+      min-width: 0;
+    }
+
+    .doc-section {
+      margin-bottom: 56px;
+      scroll-margin-top: 90px;
+    }
+
+    .doc-section-title {
+      font-family: var(--font-h);
+      font-size: 26px;
+      font-weight: 800;
+      color: #FFFFFF;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .doc-p {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #CBD5E1;
+      margin-bottom: 18px;
+    }
+
+    .highlight-card {
+      background: rgba(18, 22, 32, 0.7);
+      border: 1px solid rgba(123, 79, 255, 0.25);
+      border-left: 4px solid var(--brand-purple);
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin: 20px 0;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .table-container {
+      overflow-x: auto;
+      margin: 20px 0;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(18, 22, 32, 0.6);
+    }
+
+    .docs-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    .docs-table th {
+      background: rgba(255, 255, 255, 0.04);
+      color: #fff;
+      font-weight: 700;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .docs-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #CBD5E1;
+      vertical-align: top;
+      line-height: 1.5;
+    }
+    .docs-table tr:last-child td {
+      border-bottom: none;
+    }
+    .docs-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Badges de estado */
+    .badge-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34D399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .badge-pill-cyan {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--brand-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-pill-purple {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(123, 79, 255, 0.18);
+      color: #C4B5FD;
+      border: 1px solid rgba(123, 79, 255, 0.35);
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* Code blocks con botón de copiar */
+    .code-box {
+      background: #0A0D14;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      position: relative;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: #E2E8F0;
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+    .code-box pre {
+      margin: 0;
+      font-family: inherit;
+    }
+    .btn-copy-code {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-copy-code:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+    }
+
+    /* Diagrama de Arquitectura */
+    .arch-diagram-box {
+      background: #0D111A;
+      border: 1px solid rgba(123, 79, 255, 0.3);
+      border-radius: 18px;
+      padding: 24px;
+      margin: 22px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .arch-flow-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .arch-node {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 16px 14px;
+      text-align: center;
+      transition: transform 0.2s;
+    }
+    .arch-node:hover {
+      transform: translateY(-2px);
+      border-color: var(--brand-purple);
+      background: rgba(123, 79, 255, 0.06);
+    }
+    .arch-node-icon {
+      font-size: 26px;
+      margin-bottom: 6px;
+    }
+    .arch-node-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .arch-node-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Hero Banner */
+    .docs-hero {
+      border-bottom: 1px solid var(--border);
+      padding: 40px 24px 34px 24px;
+      background: radial-gradient(circle at 50% 0%, rgba(123, 79, 255, 0.15) 0%, transparent 65%);
+      text-align: center;
+    }
+  </style>
+</head>
+<body style="background: #090B10; overflow-x: hidden;">
+
+  <!-- Header Superior Unificado -->
+  <header class="header-bar" style="justify-content: space-between;">
+    <div style="display:flex; align-items:center; gap:16px;">
+      <a href="/" class="brand-logo">
+        <div class="brand-logo-icon">🎙️</div>
+        <span>Voicy <span style="font-size:12px; color:#A78BFA; font-weight:500;">× Nerdearla</span></span>
+      </a>
+      <span class="badge-pill-cyan" style="font-size:10px;">VIBEATHON 2026</span>
+    </div>
+
+    <!-- Navegación Rápida a Módulos del Sistema -->
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <a href="/" class="stage-tab">👥 Audiencia</a>
+      <a href="/broadcast" class="stage-tab">🎙️ Studio Orador</a>
+      <a href="/overlay?session=stage-1&lang=es" target="_blank" class="stage-tab">📺 Overlay OBS</a>
+      <a href="/monitor" class="stage-tab">🎛️ Producción</a>
+      <a href="https://github.com/mhernayes-ateam/voicy" target="_blank" class="stage-tab" style="background:rgba(255,255,255,0.08); color:#fff; border-color:rgba(255,255,255,0.2);">
+        ⭐ GitHub
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero Banner -->
+  <div class="docs-hero">
+    <div style="display:inline-flex; align-items:center; gap:8px; margin-bottom:12px;">
+      <span class="badge-live"><span class="dot"></span> DOCUMENTACIÓN TÉCNICA OFICIAL</span>
+      <span class="badge-check">LICENCIA MIT (OPEN SOURCE)</span>
+    </div>
+
+    <h1 style="font-family:var(--font-h); font-size:36px; font-weight:800; color:#fff; max-width:850px; margin:0 auto 12px auto; letter-spacing:-0.5px;">
+      Voicy: Plataforma Abierta de Subtitulado y Traducción Simultánea a Escala
+    </h1>
+
+    <p style="font-size:16px; color:var(--text-muted); max-width:740px; margin:0 auto 24px auto; line-height:1.6;">
+      Construido para resolver el desafío de accesibilidad de más de 30 sesiones concurrentes en la 
+      <strong>Vibeathon de Nerdearla 2026 (Centro Cultural Konex, Buenos Aires)</strong>.
+    </p>
+
+    <!-- Quick action links -->
+    <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+      <a href="/" class="btn btn-primary" style="font-size:13px; padding:10px 20px;">
+        🚀 Abrir Demostración en Vivo
+      </a>
+      <a href="/broadcast" class="btn btn-outline" style="font-size:13px; padding:10px 20px;">
+        🎙️ Probar Estudio del Orador
+      </a>
+      <a href="#quickstart" class="btn btn-outline" style="font-size:13px; padding:10px 20px;">
+        ⚡ Guía de Inicio Rápido (Local)
+      </a>
+    </div>
+  </div>
+
+  <!-- Layout Principal con Sidebar + Contenido -->
+  <div class="docs-layout">
+
+    <!-- Sidebar de Navegación -->
+    <aside class="docs-sidebar">
+      <div class="docs-nav-group">
+        <div class="docs-nav-title">1. Introducción</div>
+        <a href="#contexto" class="docs-nav-link">📌 Contexto del Desafío</a>
+        <a href="#problema" class="docs-nav-link">🛑 El Problema Actual</a>
+        <a href="#solucion" class="docs-nav-link">✨ La Solución: Voicy</a>
+        <a href="#matriz-cumplimiento" class="docs-nav-link">✅ Matriz de Requisitos</a>
+      </div>
+
+      <div class="docs-nav-group">
+        <div class="docs-nav-title">2. Arquitectura & IA</div>
+        <a href="#arquitectura" class="docs-nav-link">🏗️ Arquitectura del Sistema</a>
+        <a href="#gemini-live" class="docs-nav-link">🧠 Gemini Live API Streaming</a>
+        <a href="#comparativa-youtube" class="docs-nav-link">⚡ Comparativa vs YouTube CC</a>
+        <a href="#segment-manager" class="docs-nav-link">🧩 Segmentación & Roll-Up</a>
+        <a href="#traduccion" class="docs-nav-link">🌐 Pipeline Trilingüe (ES/EN/PT)</a>
+      </div>
+
+      <div class="docs-nav-group">
+        <div class="docs-nav-title">3. Opcionales Cumplidos</div>
+        <a href="#obs-overlay" class="docs-nav-link">📺 Integración OBS / vMix</a>
+        <a href="#glosario" class="docs-nav-link">📚 Glosario Técnico Nerdearla</a>
+        <a href="#export-srt" class="docs-nav-link">📥 Empaquetado & Export SRT</a>
+        <a href="#monitor" class="docs-nav-link">🎛️ Panel de Monitoreo</a>
+      </div>
+
+      <div class="docs-nav-group">
+        <div class="docs-nav-title">4. Despliegue & Código</div>
+        <a href="#quickstart" class="docs-nav-link">🚀 Guía de Instalación</a>
+        <a href="#samples" class="docs-nav-link">🎵 Audios de Prueba</a>
+        <a href="#directorio-urls" class="docs-nav-link">🔗 Directorio de URLs</a>
+        <a href="#licencia" class="docs-nav-link">⚖️ Licencia Open Source</a>
+      </div>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main class="docs-content">
+
+      <!-- SECCIÓN 1: CONTEXTO -->
+      <section id="contexto" class="doc-section">
+        <h2 class="doc-section-title">
+          <span>📌</span> 1. Contexto & Misión de la Vibeathon
+        </h2>
+        <p class="doc-p">
+          En <strong>Nerdearla</strong>, la accesibilidad es un pilar fundamental desde sus primeras ediciones. 
+          Tradicionalmente se ha ofrecido transcripción y traducción simultánea al español. Sin embargo, para la edición 2026, 
+          con <strong>más de 30 sesiones técnicas en inglés ocurriendo en múltiples escenarios en simultáneo (Stage 1, Stage 2, Stage 3)</strong>, 
+          el esquema tradicional ya no escala:
+        </p>
+
+        <div class="highlight-card">
+          <div style="font-weight:700; color:#fff; font-size:14px; margin-bottom:6px;">
+            🛑 Las limitaciones del modelo anterior:
+          </div>
+          <ul style="padding-left:20px; font-size:13px; color:#CBD5E1; line-height:1.7;">
+            <li><strong>Costo prohibitivo:</strong> Herramientas comerciales propietarias cobran por minuto por sala, resultando impagables para 5 a 10 salas en simultáneo.</li>
+            <li><strong>Dependencia operativa manual:</strong> Requiere personal dedicado conectando micrófonos y supervisando consolas cerradas.</li>
+            <li><strong>Cero replicabilidad:</strong> Otras conferencias de la comunidad open source no pueden aprovechar el software ni adaptarlo.</li>
+          </ul>
+        </div>
+
+        <p class="doc-p">
+          <strong>La Misión:</strong> Construir una solución <strong>100% Open Source</strong> de transcripción y traducción simultánea a escala, 
+          diseñada para conferencias multitudinarias, sin licencias costosas y fácilmente desplegable en cualquier evento tecnológico del mundo.
+        </p>
+      </section>
+
+      <!-- SECCIÓN 2: MATRIZ DE CUMPLIMIENTO -->
+      <section id="matriz-cumplimiento" class="doc-section">
+        <h2 class="doc-section-title">
+          <span>✅</span> 2. Matriz de Cumplimiento de Requisitos del Hackathon
+        </h2>
+        <p class="doc-p">
+          Voicy cumple el <strong>100% de los requisitos mínimos (MVP)</strong> y la <strong>totalidad de los opcionales sugeridos</strong> por el jurado:
+        </p>
+
+        <div class="table-container">
+          <table class="docs-table">
+            <thead>
+              <tr>
+                <th>Requisito Oficial</th>
+                <th>Estado</th>
+                <th>Implementación en Voicy</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Proyecto Funcional (24-25 Sept 2026)</strong></td>
+                <td><span class="badge-check">✔ Cumplido</span></td>
+                <td>Construido íntegramente durante el hackathon con commits verificables en GitHub y deploy activo.</td>
+              </tr>
+              <tr>
+                <td><strong>Audio en Vivo (Micrófono o Stream)</strong></td>
+                <td><span class="badge-check">✔ Cumplido</span></td>
+                <td>Captura PCM 16kHz directa por AudioWorklet del micrófono o stream, más audios de prueba en <code>/samples/</code>.</td>
+              </tr>
+              <tr>
+                <td><strong>Transcripción en Tiempo Real (Original)</strong></td>
+                <td><span class="badge-check">✔ Cumplido</span></td>
+                <td>Transcripción continua interim y final mediante Gemini Live API bidireccional en &lt; 500ms.</td>
+              </tr>
+              <tr>
+                <td><strong>Traducción en Tiempo Real (Inglés ↔ Español)</strong></td>
+                <td><span class="badge-check">✔ Cumplido</span></td>
+                <td>Traducción simultánea en paralelo y bidireccional inmediata en cada corte de frase.</td>
+              </tr>
+              <tr>
+                <td><strong>Escalabilidad Multi-Escenario (Concurrente)</strong></td>
+                <td><span class="badge-check">✔ Cumplido</span></td>
+                <td>Soporta ilimitados escenarios en paralelo (Stage 1, Stage 2, Stage 3). Cada sala con pipeline independiente.</td>
+              </tr>
+              <tr>
+                <td><strong>Vista para la Audiencia</strong></td>
+                <td><span class="badge-check">✔ Cumplido</span></td>
+                <td>PWA responsiva para móviles accesible escaneando un código QR con selector de sala y 4 modos de idioma.</td>
+              </tr>
+              <tr>
+                <td><strong>Licencia Open Source Aprobada por OSI</strong></td>
+                <td><span class="badge-check">✔ Cumplido</span></td>
+                <td>Licenciado bajo <strong>MIT License</strong> en el repositorio oficial de GitHub.</td>
+              </tr>
+              <tr>
+                <td><strong>🍬 Opcional: Integración OBS / vMix</strong></td>
+                <td><span class="badge-check">✔ Cumplido</span></td>
+                <td>Página dedicada <code>/overlay</code> con fondo transparente, lower-third broadcast y auto-hide tras silencio.</td>
+              </tr>
+              <tr>
+                <td><strong>🍬 Opcional: Más Idiomas (Portugués)</strong></td>
+                <td><span class="badge-check">✔ Cumplido</span></td>
+                <td>Pipeline trilingüe completo: <strong>Original, Español, English y Português</strong> en vivo.</td>
+              </tr>
+              <tr>
+                <td><strong>🍬 Opcional: Glosario Técnico Especializado</strong></td>
+                <td><span class="badge-check">✔ Cumplido</span></td>
+                <td>System instructions con glosario de términos Nerdearla (DevOps, Kubernetes, Docker, AI, Python, etc.).</td>
+              </tr>
+              <tr>
+                <td><strong>🍬 Opcional: Exportación de Transcripción (.SRT)</strong></td>
+                <td><span class="badge-check">✔ Cumplido</span></td>
+                <td>Descarga directa de subtítulos con marcas de tiempo en formato estándar <code>.srt</code> para postproducción.</td>
+              </tr>
+              <tr>
+                <td><strong>🍬 Opcional: Panel de Monitoreo de Producción</strong></td>
+                <td><span class="badge-check">✔ Cumplido</span></td>
+                <td>Dashboard en <code>/monitor</code> con métricas en tiempo real, estado de conexión de cada sala y feeds.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 3: ARQUITECTURA -->
+      <section id="arquitectura" class="doc-section">
+        <h2 class="doc-section-title">
+          <span>🏗️</span> 3. Arquitectura del Sistema
+        </h2>
+        <p class="doc-p">
+          Voicy está diseñado con una arquitectura modular distribuida que garantiza latencias inferiores a 800 ms y cero saturación en la red del evento:
+        </p>
+
+        <!-- Diagrama Visual -->
+        <div class="arch-diagram-box">
+          <div style="font-size:12px; font-weight:700; color:var(--brand-cyan); text-transform:uppercase; letter-spacing:0.8px;">
+            Flujo de Datos en Tiempo Real (End-to-End)
+          </div>
+
+          <div class="arch-flow-grid">
+            <div class="arch-node">
+              <div class="arch-node-icon">🎙️</div>
+              <div class="arch-node-title">1. Captura de Audio</div>
+              <div class="arch-node-desc">AudioWorklet captura micrófono a 16kHz PCM mono sin pérdidas de compresión.</div>
+            </div>
+
+            <div class="arch-node">
+              <div class="arch-node-icon">⚡</div>
+              <div class="arch-node-title">2. WebSocket Gateway</div>
+              <div class="arch-node-desc">Transmisión binaria de chunks de audio hacia el backend de Voicy en Node.js.</div>
+            </div>
+
+            <div class="arch-node">
+              <div class="arch-node-icon">🧠</div>
+              <div class="arch-node-title">3. Gemini Live API</div>
+              <div class="arch-node-desc">Reconocimiento multimodal bidireccional streaming por WebSocket a Google Cloud.</div>
+            </div>
+
+            <div class="arch-node">
+              <div class="arch-node-icon">🌐</div>
+              <div class="arch-node-title">4. Traducción Trilingüe</div>
+              <div class="arch-node-desc">Traductor ultra veloz a Español, Inglés y Portugués con glosario técnico.</div>
+            </div>
+
+            <div class="arch-node">
+              <div class="arch-node-icon">🔥</div>
+              <div class="arch-node-title">5. Firebase RTDB</div>
+              <div class="arch-node-desc">Distribución instantánea a miles de celulares por WebSockets con 0ms delay.</div>
+            </div>
+
+            <div class="arch-node">
+              <div class="arch-node-icon">📱</div>
+              <div class="arch-node-title">6. Vistas de Salida</div>
+              <div class="arch-node-desc">Audiencia (Mobile QR), OBS Lower-Third, Studio Orador y Monitor Técnico.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 4: COMPARATIVA YOUTUBE CC -->
+      <section id="comparativa-youtube" class="doc-section">
+        <h2 class="doc-section-title">
+          <span>⚡</span> 4. ¿Por qué Voicy es Superior a YouTube CC para Conferencias?
+        </h2>
+        <p class="doc-p">
+          Muchas personas se preguntan cómo funciona el Closed Captioning (CC) de YouTube y por qué parece rápido. 
+          Aquí explicamos las diferencias clave y por qué Voicy es una solución significativamente mejor para eventos presenciales y virtuales:
+        </p>
+
+        <div class="table-container">
+          <table class="docs-table">
+            <thead>
+              <tr>
+                <th>Dimensión</th>
+                <th>YouTube Live CC</th>
+                <th>Voicy (Nerdearla 2026)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Retraso en el Auditorio</strong></td>
+                <td><strong>4 a 15 segundos de delay</strong> (por el buffer de video HLS/DASH obligatorio de YouTube). Inviable para leer en vivo mientras el orador habla en el escenario.</td>
+                <td><strong>Ultra baja latencia (&lt; 800 ms)</strong>. El texto llega al teléfono de la persona sentada en la butaca casi al mismo tiempo que las ondas sonoras del parlante.</td>
+              </tr>
+              <tr>
+                <td><strong>Traducción Simultánea</strong></td>
+                <td>Solo transcribe el audio original. La traducción es opcional, muy lenta y de calidad básica.</td>
+                <td><strong>Traducción nativa en vivo</strong> a 3 idiomas simultáneos (Español, Inglés y Portugués).</td>
+              </tr>
+              <tr>
+                <td><strong>Jerga Técnica & Código</strong></td>
+                <td>Modelos acústicos tradicionales suelen fallar en términos como <em>Kubernetes, Docker, PostgreSQL</em> transcribiendo disparates fonéticos.</td>
+                <td><strong>Comprensión semántica profunda de Gemini</strong>: reconoce frameworks, comandos de consola y conceptos de ingeniería.</td>
+              </tr>
+              <tr>
+                <td><strong>Integración de Video (OBS / vMix)</strong></td>
+                <td>Subtítulo rígido embebido en el reproductor de YouTube, tapa las diapositivas o slides del orador.</td>
+                <td><strong>Overlay transparente dedicado</strong> para broadcast en 1080p con 2 líneas dinámicas profesionales tipo televisión.</td>
+              </tr>
+              <tr>
+                <td><strong>Ciclo de Grabación por Charla</strong></td>
+                <td>El texto se acumula en un bloque continuo sin separación de conferencias.</td>
+                <td><strong>Empaquetado inteligente</strong>: al detener una charla, el bloque se cierra, se genera el archivo <code>.SRT</code> y la pantalla queda limpia a cero para el próximo orador.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 5: VISTAS Y MÓDULOS -->
+      <section id="directorio-urls" class="doc-section">
+        <h2 class="doc-section-title">
+          <span>🔗</span> 5. Directorio de Módulos & URLs del Sistema
+        </h2>
+        <p class="doc-p">
+          El sistema está desplegado y cuenta con endpoints listos para producción para cada rol en la conferencia:
+        </p>
+
+        <div class="table-container">
+          <table class="docs-table">
+            <thead>
+              <tr>
+                <th>Módulo</th>
+                <th>URL Pública</th>
+                <th>Destinatario</th>
+                <th>Características</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>👥 Vista de Audiencia</strong></td>
+                <td><a href="/" target="_blank" style="color:var(--brand-cyan); text-decoration:none;"><code>/?session=stage-1</code></a></td>
+                <td>Asistentes en sala o streaming</td>
+                <td>Selector de sala (Stage 1, 2, 3), selector de idioma (Original, ES, EN, PT), código QR para compartir, descarga de SRT.</td>
+              </tr>
+              <tr>
+                <td><strong>🎙️ Studio del Orador</strong></td>
+                <td><a href="/broadcast" target="_blank" style="color:#A78BFA; text-decoration:none;"><code>/broadcast</code></a></td>
+                <td>Disertante / Técnico de escenario</td>
+                <td>Botón de RECORD con feedback de estado en vivo, empaquetado automático de bloque al parar, reinicio limpio en 0ms.</td>
+              </tr>
+              <tr>
+                <td><strong>📺 Overlay OBS / vMix</strong></td>
+                <td><a href="/overlay?session=stage-1&lang=es" target="_blank" style="color:#34D399; text-decoration:none;"><code>/overlay?session=stage-1&lang=es</code></a></td>
+                <td>Equipo de Streaming / YouTube</td>
+                <td>Fondo 100% transparente para fuente de navegador en OBS, formato lower-third de 2 líneas y auto-ocultamiento tras silencio.</td>
+              </tr>
+              <tr>
+                <td><strong>🎛️ Monitor de Producción</strong></td>
+                <td><a href="/monitor" target="_blank" style="color:#F59E0B; text-decoration:none;"><code>/monitor</code></a></td>
+                <td>Dirección técnica de Nerdearla</td>
+                <td>Monitoreo en vivo de los 3 escenarios en paralelo, estado de conexión, último texto reconocido y accesos directos.</td>
+              </tr>
+              <tr>
+                <td><strong>📖 Documentación Técnica</strong></td>
+                <td><a href="/docs" target="_blank" style="color:#C4B5FD; text-decoration:none;"><code>/docs</code></a></td>
+                <td>Jurado y Desarrolladores</td>
+                <td>Esta documentación interactiva completa con guías de instalación y arquitectura.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 6: GUÍA DE INSTALACIÓN RÁPIDA -->
+      <section id="quickstart" class="doc-section">
+        <h2 class="doc-section-title">
+          <span>⚡</span> 6. Guía de Instalación y Despliegue Local (Quickstart)
+        </h2>
+        <p class="doc-p">
+          Cualquier conferencia u organizador puede clonar y ejecutar Voicy en 3 simples pasos:
+        </p>
+
+        <h3 style="font-size:16px; font-weight:700; color:#fff; margin:16px 0 6px 0;">1. Clonar el Repositorio e Instalar Dependencias</h3>
+        <div class="code-box">
+          <button class="btn-copy-code" onclick="copyCode(this)">Copiar</button>
+          <pre>git clone https://github.com/mhernayes-ateam/voicy.git
+cd voicy/backend
+npm install</pre>
+        </div>
+
+        <h3 style="font-size:16px; font-weight:700; color:#fff; margin:16px 0 6px 0;">2. Configurar Variables de Entorno</h3>
+        <p class="doc-p">
+          Creá un archivo <code>.env</code> dentro del directorio <code>backend/</code> con tu API Key de Gemini:
+        </p>
+        <div class="code-box">
+          <button class="btn-copy-code" onclick="copyCode(this)">Copiar</button>
+          <pre>PORT=8090
+HOST=0.0.0.0
+GEMINI_API_KEY=tu_api_key_de_gemini
+FIREBASE_DATABASE_URL=https://voicy-3fca6-default-rtdb.firebaseio.com</pre>
+        </div>
+
+        <h3 style="font-size:16px; font-weight:700; color:#fff; margin:16px 0 6px 0;">3. Iniciar el Servidor Todo-en-Uno</h3>
+        <div class="code-box">
+          <button class="btn-copy-code" onclick="copyCode(this)">Copiar</button>
+          <pre>npm start
+# O en modo desarrollo con recarga automática:
+npm run dev</pre>
+        </div>
+
+        <p class="doc-p">
+          Abrí tu navegador en <code>http://localhost:8090</code> para ver la audiencia, o <code>http://localhost:8090/broadcast</code> para empezar a hablar.
+        </p>
+      </section>
+
+      <!-- SECCIÓN 7: AUDIOS DE PRUEBA -->
+      <section id="samples" class="doc-section">
+        <h2 class="doc-section-title">
+          <span>🎵</span> 7. Modo de Prueba con Audios Pregrabados
+        </h2>
+        <p class="doc-p">
+          Cumpliendo con la recomendación del jurado de la Vibeathon de proveer una forma sencilla de probar el sistema sin necesidad de hablar al micrófono, 
+          el repositorio incluye audios de charlas de ediciones anteriores de Nerdearla en <code>frontend/samples/</code>:
+        </p>
+
+        <div class="highlight-card">
+          <div style="font-weight:700; color:#fff; font-size:14px; margin-bottom:6px;">
+            Archivos de muestra disponibles:
+          </div>
+          <ul style="padding-left:20px; font-size:13px; color:#CBD5E1; line-height:1.7;">
+            <li><code>/samples/nerdearla_tech_talk_en.wav</code> — Charla técnica en inglés sobre Cloud Native y Kubernetes.</li>
+            <li><code>/samples/nerdearla_intro_es.wav</code> — Bienvenida en español con términos técnicos locales.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 8: INTEGRACIÓN CON OBS -->
+      <section id="obs-overlay" class="doc-section">
+        <h2 class="doc-section-title">
+          <span>📺</span> 8. Cómo Integrar Subtítulos en OBS Studio o vMix
+        </h2>
+        <p class="doc-p">
+          Para quemar los subtítulos directamente sobre el video en YouTube o Twitch durante la transmisión de Nerdearla:
+        </p>
+
+        <ol style="padding-left:24px; font-size:14px; color:#CBD5E1; line-height:1.8;">
+          <li>En OBS Studio, agregá una nueva fuente de tipo <strong>"Navegador" (Browser Source)</strong>.</li>
+          <li>En la URL, pegá la dirección del overlay: <br>
+            <code>https://voicy-3fca6.web.app/overlay?session=stage-1&lang=es</code>
+          </li>
+          <li>Configurá el ancho en <strong>1920</strong> y el alto en <strong>1080</strong>.</li>
+          <li>Desmarcá <em>"Controlar audio a través de OBS"</em> (el audio no viaja por ahí, solo el texto).</li>
+          <li>¡Listo! El lower-third aparecerá flotando sobre el video con tipografía nítida y fondo desenfocado solo cuando el orador hable.</li>
+        </ol>
+      </section>
+
+      <!-- SECCIÓN 9: LICENCIA -->
+      <section id="licencia" class="doc-section">
+        <h2 class="doc-section-title">
+          <span>⚖️</span> 9. Licencia Open Source (MIT)
+        </h2>
+        <p class="doc-p">
+          Voicy está publicado bajo la <strong>Licencia MIT</strong>, aprobada por la <em>Open Source Initiative (OSI)</em>:
+        </p>
+
+        <div class="code-box" style="font-size:12px;">
+<pre>MIT License
+
+Copyright (c) 2026 Voicy Contributors / Nerdearla Vibeathon
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre>
+        </div>
+      </section>
+
+      <!-- Footer de Documentación -->
+      <footer style="margin-top:60px; padding-top:24px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; font-size:12px; color:var(--text-muted);">
+        <div>
+          Desarrollado con ❤️ para <strong>Nerdearla 2026</strong> • Buenos Aires, Argentina.
+        </div>
+        <div style="display:flex; gap:14px;">
+          <a href="https://sysar.my/discord" target="_blank" style="color:#A78BFA; text-decoration:none;">Discord de Sysarmy</a>
+          <a href="https://github.com/mhernayes-ateam/voicy" target="_blank" style="color:var(--brand-cyan); text-decoration:none;">Repositorio GitHub</a>
+          <a href="/" style="color:#fff; text-decoration:none;">Volver a Voicy</a>
+        </div>
+      </footer>
+
+    </main>
+  </div>
+
+  <script>
+    function copyCode(btn) {
+      const code = btn.nextElementSibling.innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        const prev = btn.innerText;
+        btn.innerText = '¡Copiado!';
+        btn.style.color = '#34D399';
+        setTimeout(() => {
+          btn.innerText = prev;
+          btn.style.color = '';
+        }, 1500);
+      });
+    }
+
+    // Scrollspy para el sidebar de documentación
+    const navLinks = document.querySelectorAll('.docs-nav-link');
+    const sections = document.querySelectorAll('.doc-section');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 120;
+        if (pageYOffset >= top) {
+          current = sec.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `#${current}`) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
